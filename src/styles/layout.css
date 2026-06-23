@@ -1,0 +1,55 @@
+/* =============================================================================
+   Sistema de Layout — Grid
+   Baseado no node Figma 38:2093: 1 coluna p/ sidenav + 12 colunas p/ conteúdo.
+   ============================================================================= */
+
+:root {
+  --sidenav-width: 52px; /* Figma: rail de 52px */
+  --grid-columns: 12;
+  --grid-gutter: var(--spacing-16); /* gap entre painéis no Figma = 16px */
+}
+
+/* Shell: sidenav (1 coluna fixa) + área de conteúdo (resto) */
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: var(--sidenav-width) 1fr;
+  background: var(--color-bg-page);
+}
+
+/* Coluna de conteúdo: topbar full-width empilhada sobre o grid de 12 colunas */
+.content-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grid de 12 colunas do conteúdo */
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  gap: var(--grid-gutter);
+  padding: var(--spacing-24);
+  align-items: start;
+}
+
+/* Helpers de span (1..12) */
+.col-span-1  { grid-column: span 1; }
+.col-span-2  { grid-column: span 2; }
+.col-span-3  { grid-column: span 3; }
+.col-span-4  { grid-column: span 4; }
+.col-span-5  { grid-column: span 5; }
+.col-span-6  { grid-column: span 6; }
+.col-span-7  { grid-column: span 7; }
+.col-span-8  { grid-column: span 8; }
+.col-span-9  { grid-column: span 9; }
+.col-span-10 { grid-column: span 10; }
+.col-span-11 { grid-column: span 11; }
+.col-span-12 { grid-column: span 12; }
+
+/* Responsivo: abaixo de 1024px o conteúdo vira 1 coluna */
+@media (max-width: 1024px) {
+  .content-grid > [class*='col-span-'] {
+    grid-column: span 12;
+  }
+}

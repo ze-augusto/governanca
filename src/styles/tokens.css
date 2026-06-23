@@ -1,0 +1,185 @@
+/* =============================================================================
+   Design Tokens — Governança
+   Fonte: export de variáveis do Figma (Design - Governança)
+   https://www.figma.com/design/Tfv3nBHSellofAk3LygS7K/Design---Governanca
+
+   1. PRIMITIVOS  — paleta/escala bruta. Não usar direto em UI.
+   2. SEMÂNTICOS  — apontam para primitivos. USAR ESTES nos componentes.
+
+   
+/* =============================================================================
+   1. PRIMITIVOS
+   ============================================================================= */
+:root {
+  /* --- Branco --------------------------------------------------------------- */
+  --branco-1000: #ffffff;
+
+  /* --- Cinza ---------------------------------------------------------------- */
+  --cinza-50: #fdfdfd;
+  --cinza-100: #fafafb;
+  --cinza-200: #f3f4f5;
+  --cinza-300: #ebedef;
+  --cinza-400: #dfe1e5;
+  --cinza-500: #cccfd5;
+  --cinza-600: #b4b9c1;
+  --cinza-700: #999faa;
+  --cinza-800: #7d8593;
+  --cinza-900: #5d6779;
+  --cinza-1000: #3a465c;
+
+  /* --- Preto ---------------------------------------------------------------- */
+  --preto-50: #f8f8f9;
+  --preto-100: #f0f1f3;
+  --preto-200: #e1e3e6;
+  --preto-300: #cdd1d5;
+  --preto-400: #b4bac1;
+  --preto-500: #9ba3ac;
+  --preto-600: #7e8793;
+  --preto-700: #606b7a;
+  --preto-800: #424f61;
+  --preto-900: #243448;
+  --preto-1000: #06182f;
+
+  /* --- Marca (Azul Anil) ---------------------------------------------------- */
+  --marca-50: #f8f9fb;
+  --marca-100: #eff1f6;
+  --marca-200: #dde1ec;
+  --marca-300: #c4cbdf;
+  --marca-400: #a8b2cf;
+  --marca-500: #8e9ac1;
+  --marca-600: #7282b2;
+  --marca-700: #5669a3;
+  --marca-800: #405697;
+  --marca-900: #2e458c;
+  --marca-1000: #1c3582;
+
+  /* --- Verde (sucesso) ------------------------------------------------------ */
+  --verde-50: #f8fbf9;
+  --verde-100: #eff6f0;
+  --verde-200: #dcebdf;
+  --verde-300: #c2dcc8;
+  --verde-400: #a6ccaf;
+  --verde-500: #8abd96;
+  --verde-600: #6ead7c;
+  --verde-700: #529d63;
+  --verde-800: #3a8f4e;
+  --verde-900: #28853d;
+  --verde-1000: #157a2c;
+
+  /* --- Laranja (atenção) ---------------------------------------------------- */
+  --laranja-50: #fbfaf7;
+  --laranja-100: #f7f3ed;
+  --laranja-200: #ede5d9;
+  --laranja-300: #e1d2bd;
+  --laranja-400: #d3be9e;
+  --laranja-500: #c5a980;
+  --laranja-600: #b69461;
+  --laranja-700: #a88042;
+  --laranja-800: #9d6f29;
+  --laranja-900: #936114;
+  --laranja-1000: #8a5300;
+
+  /* --- Vermelho (erro) ------------------------------------------------------ */
+  --vermelho-50: #fdf8f8;
+  --vermelho-100: #faf0ef;
+  --vermelho-200: #f4dedc;
+  --vermelho-300: #ecc6c3;
+  --vermelho-400: #e3aba7;
+  --vermelho-500: #da918c;
+  --vermelho-600: #d17770;
+  --vermelho-700: #c85c54;
+  --vermelho-800: #c0463d;
+  --vermelho-900: #ba352a;
+  --vermelho-1000: #b42318;
+
+  /* --- Azul (info) = escala Marca (sem escala azul própria) ----------------- */
+}
+
+/* =============================================================================
+   2. SEMÂNTICOS  (apontam para primitivos — usar nos componentes)
+   ============================================================================= */
+:root {
+  /* --- Fundo ---------------------------------------------------------------- */
+  --color-bg-card: var(--branco-1000);
+  --color-bg-hover: var(--cinza-200);
+  --color-bg-page: var(--cinza-100);
+  --color-bg-subtle: var(--cinza-50);
+
+  /* --- Borda ---------------------------------------------------------------- */
+  --color-border-brand: var(--marca-1000);
+  --color-border-default: var(--cinza-500);
+  --color-border-strong: var(--cinza-600);
+  --color-border-subtle: var(--cinza-200);
+
+  /* --- Marca ---------------------------------------------------------------- */
+  --color-brand-active: var(--marca-800);
+  --color-brand-default: var(--marca-1000);
+  --color-brand-hover: var(--marca-900);
+  --color-brand-muted: var(--marca-100);
+  --color-brand-subtle: var(--marca-200);
+
+  /* --- Feedback ------------------------------------------------------------- */
+  --color-error-default: var(--vermelho-1000);
+  --color-error-subtle: var(--vermelho-100);
+  --color-info-default: var(--marca-1000);
+  --color-info-subtle: var(--marca-100);
+  --color-success-default: var(--verde-1000);
+  --color-success-subtle: var(--verde-100);
+  --color-warning-default: var(--laranja-1000);
+  --color-warning-subtle: var(--laranja-100);
+
+  /* --- Ícone ---------------------------------------------------------------- */
+  --color-icon-brand: var(--marca-1000);
+  --color-icon-default: var(--cinza-1000);
+  --color-icon-disabled: var(--cinza-600);
+  --color-icon-error: var(--vermelho-1000);
+  --color-icon-info: var(--marca-1000);
+  --color-icon-inverse: var(--branco-1000);
+  --color-icon-secondary: var(--cinza-800);
+  --color-icon-success: var(--verde-1000);
+  --color-icon-warning: var(--laranja-1000);
+
+  /* --- Texto ---------------------------------------------------------------- */
+  --color-text-body: var(--cinza-1000);
+  --color-text-brand: var(--marca-1000);
+  --color-text-disabled: var(--cinza-600);
+  --color-text-inverse: var(--branco-1000);
+  --color-text-secondary: var(--cinza-800);
+  --color-text-title: var(--preto-1000);
+}
+
+/* =============================================================================
+   3. ESPAÇAMENTO
+   ============================================================================= */
+:root {
+  --spacing-2: 2px;
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-10: 10px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-36: 36px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+  --spacing-128: 128px;
+}
+
+/* =============================================================================
+   4. BORDER RADIUS
+   ============================================================================= */
+:root {
+  --radius-0: 0px;
+  --radius-2: 2px;
+  --radius-4: 4px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-24: 24px;
+  --radius-full: 9999px;
+}

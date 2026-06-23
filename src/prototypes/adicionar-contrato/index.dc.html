@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #3a465c;
+    background: #fafafb;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#fafafb; display:flex; align-items:stretch;">
+
+    <!-- Sidebar rail — fixed, full height, never scrolls -->
+    <aside style="width:64px; background:#ffffff; border-right:1px solid #ebedef; display:flex; flex-direction:column; align-items:center; padding:12px 0; gap:8px; flex:none; position:sticky; top:0; align-self:flex-start; height:100vh;">
+      <div style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; margin-bottom:14px;">
+        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 3 L22 20 H2 Z" fill="#00279e"></path></svg>
+      </div>
+      <div style="width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#7d8593;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><rect x="7" y="11" width="3" height="7"></rect><rect x="12" y="7" width="3" height="11"></rect><rect x="17" y="4" width="3" height="14"></rect></svg>
+      </div>
+      <div style="width:40px; height:40px; border-radius:8px; background:#edf0f8; display:flex; align-items:center; justify-content:center; color:#00279e;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h6"></path></svg>
+      </div>
+      <div style="width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#7d8593;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+    </aside>
+
+    <!-- Right column: sticky topbar + scrollable content -->
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+      <!-- Top bar — pinned to the top, starts after the sidebar -->
+      <header style="position:sticky; top:0; z-index:20; height:64px; background:#ffffff; border-bottom:2px solid #00279e; display:flex; align-items:center; justify-content:space-between; padding:0 24px; flex:none;">
+        <nav style="display:flex; align-items:center; gap:8px; font-size:15px; color:#7d8593;">
+          <span>Início</span>
+          <span style="color:#cccfd5;">/</span>
+          <span>Lista de contratos</span>
+          <span style="color:#cccfd5;">/</span>
+          <span style="color:#06182f; font-weight:600;">Adicionar contrato</span>
+        </nav>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button style="height:44px; padding:0 22px; border-radius:8px; border:1px solid #cccfd5; background:#ffffff; color:#3a465c; font-size:15px; font-weight:600; cursor:pointer;">Cancelar</button>
+          <button style="height:44px; padding:0 22px; border-radius:8px; border:1px solid #00279e; background:#00279e; color:#ffffff; font-size:15px; font-weight:600; cursor:pointer;">Salvar contrato</button>
+        </div>
+      </header>
+
+      <!-- Main content -->
+      <main style="flex:1; min-width:0; display:flex; gap:24px; padding:24px; align-items:flex-start;">
+
+      <!-- LEFT — PDF preview -->
+      <section style="flex:1 1 auto; min-width:360px; background:#ffffff; border:1px solid #ebedef; border-radius:8px; overflow:hidden;">
+        <div style="height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-bottom:1px solid #f3f4f5;">
+          <span style="font-size:15px; color:#3a465c; font-weight:500;">contrato.pdf</span>
+          <div style="display:flex; align-items:center; gap:8px; font-size:14px; color:#7d8593;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:32px; padding:0 8px; border:1px solid #ebedef; border-radius:8px; color:#3a465c;">1</span>
+            <span>/ 16</span>
+          </div>
+        </div>
+        <div style="padding:28px; background:#fdfdfd; min-height:760px;">
+          <div style="max-width:520px; margin:0 auto; background:#ffffff; border:1px solid #ebedef; border-radius:4px; padding:48px 44px; box-shadow:0 1px 3px rgba(6,24,47,.04);">
+            <div style="font-size:11px; font-weight:700; color:#243448; text-align:right; line-height:1.7; letter-spacing:.3px;">CONTRATO QUE ENTRE SI CELEBRAM O CONSELHO NACIONAL DO MINISTÉRIO PÚBLICO — CNMP E A PESSOA JURÍDICA PARA AQUISIÇÃO DE MATERIAL DE INFORMÁTICA</div>
+            <div style="margin-top:28px; display:flex; flex-direction:column; gap:9px;">
+              <sc-for list="{{ docLines }}" as="w" hint-placeholder-count="14">
+                <div style="height:7px; border-radius:2px; background:#ebedef; width:{{ w.w }};"></div>
+              </sc-for>
+            </div>
+            <div style="margin-top:26px; height:9px; width:46%; border-radius:2px; background:#cdd1d5;"></div>
+            <div style="margin-top:14px; display:flex; flex-direction:column; gap:9px;">
+              <div style="height:7px; border-radius:2px; background:#ebedef; width:97%;"></div>
+              <div style="height:7px; border-radius:2px; background:#ebedef; width:88%;"></div>
+              <div style="height:7px; border-radius:2px; background:#ebedef; width:93%;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT — Form (harmonized) -->
+      <section style="flex:0 0 868px; max-width:868px; background:#ffffff; border:1px solid #ebedef; border-radius:8px; padding:28px 32px 32px;">
+
+        <!-- Panel title + AI marker -->
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:20px; border-bottom:1px solid #ebedef;">
+          <h1 style="margin:0; font-size:19px; font-weight:700; color:#06182f;">Dados do contrato</h1>
+          <span style="display:inline-flex; align-items:center; gap:7px; height:28px; padding:0 12px; border-radius:9999px; background:#edf0f8; color:#00279e; font-size:12px; font-weight:600;">
+            <span style="width:6px; height:6px; border-radius:9999px; background:#00279e;"></span>
+            Preenchido pela IA
+          </span>
+        </div>
+
+        <!-- SECTION: Dados gerais -->
+        <div style="padding-top:28px;">
+          <div style="font-size:15px; font-weight:600; color:#06182f; margin-bottom:18px;">Dados gerais</div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Objeto do contrato</label>
+            <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">Licenças de software de design de interfaces — Figma</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Valor do contrato</label>
+              <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">R$ 17.706,12</div>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Data de início</label>
+              <div style="height:46px; display:flex; align-items:center; gap:10px; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7d8593" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>
+                01/01/2026
+              </div>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Data de fim</label>
+              <div style="height:46px; display:flex; align-items:center; gap:10px; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7d8593" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg>
+                01/01/2029
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: Dados do contratado -->
+        <div style="padding-top:28px; margin-top:28px; border-top:1px solid #f3f4f5;">
+          <div style="font-size:15px; font-weight:600; color:#06182f; margin-bottom:18px;">Dados do contratado</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Nome da empresa contratada</label>
+              <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">Software Mais</div>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">CNPJ</label>
+              <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">72.333.486/0001-90</div>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">Representante da empresa contratada</label>
+              <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">Maria Alsanir Sousa Silva</div>
+            </div>
+            <div>
+              <label style="display:block; font-size:13px; font-weight:500; color:#7d8593; margin-bottom:8px;">CPF</label>
+              <div style="height:46px; display:flex; align-items:center; padding:0 14px; background:#ffffff; border:1px solid #cccfd5; border-radius:8px; font-size:15px; color:#3a465c;">123.456.789-10</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: Itens contratados -->
+        <div style="padding-top:28px; margin-top:28px; border-top:1px solid #f3f4f5;">
+          <div style="font-size:15px; font-weight:600; color:#06182f; margin-bottom:14px;">Itens contratados</div>
+
+          <div style="border:1px solid #ebedef; border-radius:8px; overflow:hidden;">
+            <!-- header -->
+            <div style="display:grid; grid-template-columns:1fr 84px 96px 124px 124px 84px; align-items:center; padding:11px 16px; background:#fafafb; border-bottom:1px solid #ebedef; font-size:11.5px; font-weight:600; letter-spacing:.4px; text-transform:uppercase; color:#7d8593;">
+              <div>Descrição</div>
+              <div>Unidade</div>
+              <div style="text-align:right;">Quant.</div>
+              <div style="text-align:right;">Valor unit.</div>
+              <div style="text-align:right;">Valor total</div>
+              <div style="text-align:right;">Ações</div>
+            </div>
+            <!-- rows -->
+            <sc-for list="{{ itens }}" as="item" hint-placeholder-count="6">
+              <div style="display:grid; grid-template-columns:1fr 84px 96px 124px 124px 84px; align-items:center; padding:13px 16px; border-bottom:1px solid #f3f4f5; font-size:14px; color:#3a465c;">
+                <div style="font-weight:500; color:#243448;">{{ item.desc }}</div>
+                <div style="color:#7d8593;">{{ item.unidade }}</div>
+                <div style="text-align:right; color:#7d8593;">{{ item.quant }}</div>
+                <div style="text-align:right; font-variant-numeric:tabular-nums;">{{ item.unit }}</div>
+                <div style="text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:#243448;">{{ item.total }}</div>
+                <div style="display:flex; gap:4px; justify-content:flex-end;">
+                  <button style="width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; border-radius:8px; color:#7d8593; cursor:pointer;" style-hover="background:#edf0f8; color:#00279e;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                  </button>
+                  <button style="width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:none; background:transparent; border-radius:8px; color:#7d8593; cursor:pointer;" style-hover="background:#ffeeee; color:#fc5757;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+            <!-- totals -->
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:#fafafb;">
+              <span style="font-size:14px; color:#7d8593;">Total de itens: <strong style="color:#243448; font-weight:600;">10</strong></span>
+              <span style="font-size:14px; color:#7d8593;">Valor total dos itens: <strong style="color:#00279e; font-weight:700; font-variant-numeric:tabular-nums;">R$ 17.706,12</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: Setores beneficiados -->
+        <div style="padding-top:28px; margin-top:28px; border-top:1px solid #f3f4f5;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+            <div style="font-size:15px; font-weight:600; color:#06182f;">Setor(es) beneficiado(s)</div>
+            <span style="display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:9999px; border:1px solid #dfe1e5; color:#7d8593; font-size:11.5px; font-weight:600;">
+              <span style="width:5px; height:5px; border-radius:9999px; background:#b4b9c1;"></span>
+              Preenchimento manual
+            </span>
+          </div>
+          <p style="margin:0 0 16px; font-size:13px; color:#999faa;">Selecione os setores que serão atendidos por este contrato.</p>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+            <sc-for list="{{ setores }}" as="setor" hint-placeholder-count="7">
+              <button onClick="{{ setor.toggle }}" style="display:flex; align-items:center; gap:12px; text-align:left; padding:14px 14px; border-radius:8px; border:1px solid #cccfd5; background:#ffffff; cursor:pointer; font-size:14.5px; color:#3a465c; {{ setor.cardStyle }}">
+                <span style="width:20px; height:20px; flex:none; border-radius:4px; border:1.5px solid #cccfd5; background:#ffffff; display:flex; align-items:center; justify-content:center; color:#ffffff; {{ setor.boxStyle }}">
+                  <sc-if value="{{ setor.checked }}" hint-placeholder-val="{{ true }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                  </sc-if>
+                </span>
+                <span style="{{ setor.labelStyle }}">{{ setor.nome }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1512, &quot;height&quot;: 1180}}">
+class Component extends DCLogic {
+  state = {
+    setores: [
+      { nome: 'Almoxarifado', checked: false },
+      { nome: 'Pesquisa e Desenv.', checked: true },
+      { nome: 'Gestão de Projetos', checked: false },
+      { nome: 'Suprimentos', checked: false },
+      { nome: 'Recursos Humanos', checked: false },
+      { nome: 'Segurança do Trabalho', checked: false },
+      { nome: 'Engenharia Civil', checked: false },
+    ],
+  };
+
+  toggle(i) {
+    this.setState(s => ({
+      setores: s.setores.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)),
+    }));
+  }
+
+  renderVals() {
+    const org = { desc: 'Licença Figma Organization', unidade: 'Anual', quant: '3 anos', unit: 'R$ 1.017,59', total: 'R$ 3.052,77' };
+    const dev = { desc: 'Licença Figma Dev', unidade: 'Anual', quant: '3 anos', unit: 'R$ 305,28', total: 'R$ 915,84' };
+    const itens = [org, org, org, org, dev, dev, dev, dev, dev, dev];
+
+    const docLines = ['94%', '99%', '90%', '97%', '85%', '93%', '88%', '96%', '91%', '99%', '87%', '94%', '82%', '90%'].map(w => ({ w }));
+
+    const setores = this.state.setores.map((s, i) => ({
+      ...s,
+      toggle: () => this.toggle(i),
+      cardStyle: s.checked ? 'border-color:#00279e; background:#edf0f8;' : '',
+      boxStyle: s.checked ? 'background:#00279e; border-color:#00279e;' : '',
+      labelStyle: s.checked ? 'color:#00279e; font-weight:600;' : '',
+    }));
+
+    return { itens, docLines, setores };
+  }
+}
+</script>
+</body>
+</html>
