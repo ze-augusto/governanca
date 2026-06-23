@@ -31,6 +31,12 @@
   border-color: var(--color-brand-hover);
 }
 
+/* Tabela — radius + scroll horizontal quando as colunas excedem a largura */
+.lc-table {
+  overflow-x: auto;
+  border-radius: var(--radius-8);
+}
+
 /* Linha da tabela — destaque no hover */
 .lc-row {
   background: var(--color-bg-card);
@@ -38,6 +44,53 @@
 }
 .lc-row:hover {
   background: var(--color-bg-hover);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Redimensionamento de colunas — affordance discreto                          */
+/* -------------------------------------------------------------------------- */
+
+/* célula de cabeçalho: ancora o handle e ganha leve realce ao arrastar */
+.lc-th {
+  position: relative;
+  transition: background 0.12s;
+}
+.lc-th--resizing {
+  background: var(--color-brand-muted);
+}
+
+/* área de arraste — larga o suficiente p/ alvo confortável, fica sobre o gap */
+.lc-resizer {
+  position: absolute;
+  top: 0;
+  right: -8px; /* metade do gap de 16px → centraliza na divisa das colunas */
+  width: 16px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+}
+
+/* traço vertical — invisível por padrão, surge sutil ao passar na tabela */
+.lc-resizer__line {
+  width: 2px;
+  height: 56%;
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background 0.12s, height 0.12s;
+}
+/* dica de descoberta: ao passar o mouse no cabeçalho, divisas ficam sutis */
+.lc-thead:hover .lc-resizer__line {
+  background: var(--color-border-default);
+}
+/* alvo direto / arrastando: divisa em destaque (brand) e cheia */
+.lc-resizer:hover .lc-resizer__line,
+.lc-resizer--active .lc-resizer__line {
+  background: var(--color-border-brand);
+  height: 100%;
 }
 
 /* Paginação — elementos circulares 42px */
