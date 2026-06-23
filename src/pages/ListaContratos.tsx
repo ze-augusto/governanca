@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import {
   Search,
   Filter,
@@ -132,15 +132,85 @@ const CONTRATOS: Contrato[] = [
   },
 ];
 
-/* Colunas da tabela — Figma: objeto 264 / setores 304 / início 160 / fim 148 /
-   valor 160 / estado 180. Objeto estica; demais fixas. Gap 16. */
-const gridCols = 'minmax(220px, 1fr) 304px 160px 148px 160px 180px';
+/* Colunas — larguras default do Figma (objeto 264 / setores 304 / início 160 /
+   fim 148 / valor 160 / estado 180). `sortable` espelha os ícones do Figma. */
+type ColKey = 'objeto' | 'setores' | 'inicio' | 'fim' | 'valor' | 'estado';
+
+const COLUMNS: { key: ColKey; label: string; sortable: boolean; width: number }[] = [
+  { key: 'objeto', label: 'Objeto do contrato', sortable: true, width: 264 },
+  { key: 'setores', label: 'Setores beneficiados', sortable: false, width: 304 },
+  { key: 'inicio', label: 'Início de contrato', sortable: true, width: 160 },
+  { key: 'fim', label: 'Fim de contrato', sortable: true, width: 148 },
+  { key: 'valor', label: 'Valor do contrato', sortable: true, width: 160 },
+  { key: 'estado', label: 'Estado', sortable: true, width: 180 },
+];
+
+/* colunas que esticam p/ preencher o espaço: Objeto (0) e Setores (1) */
+const FLEX_COLS = new Set([0, 1]);
 
 /* -------------------------------------------------------------------------- */
 /* Página                                                                      */
 /* -------------------------------------------------------------------------- */
 
 export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
+  /* largura (px) de cada coluna — redimensionável pelo usuário */
+  const [widths, setWidths] = useState<number[]>(() => COLUMNS.map((c) => c.width));
+  /* índice da coluna sendo arrastada (p/ realce visual) */
+  const [resizing, setResizing] = useState<number | null>(null);
+  /* colunas flex que o usuário arrastou — saem do 1fr e viram px fixo */
+  const [pinned, setPinned] = useState<Set<number>>(() => new Set());
+
+  /* Objeto (0) e Setores (1) crescem p/ preencher a largura sobrando (1fr) — até
+     o usuário arrastá-las: aí entram em `pinned`, viram px fixo e encolhem
+     livremente. As demais já são px fixo. Duplo-clique restaura (e volta a
+     esticar). Em telas estreitas tudo respeita o mínimo e o scroll-x entra. */
+  const isFlex = (i: number) => FLEX_COLS.has(i) && !pinned.has(i);
+  const gridTemplate = widths
+    .map((w, i) => (isFlex(i) ? `minmax(${w}px, 1fr)` : `${w}px`))
+    .join(' ');
+
+  /* arrasta a borda direita da coluna `i` */
+  const startResize = (i: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    const th = (e.currentTarget as HTMLElement).parentElement as HTMLElement;
+    const label = th.querySelector('span') as HTMLElement;
+    const col = COLUMNS[i];
+    /* mínimo = 8 (borda) + texto + [8 + ícone de ordenação 15] + 8 (borda) */
+    const min = 8 + Math.ceil(label.scrollWidth) + (col.sortable ? 8 + 15 : 0) + 8;
+    const startX = e.clientX;
+    /* largura real renderizada — cobre o caso flex (≠ do piso `widths[i]`) */
+    const startW = th.getBoundingClientRect().width;
+    setResizing(i);
+    /* fixa a coluna flex p/ que o arraste passe a valer de verdade */
+    if (FLEX_COLS.has(i)) setPinned((p) => new Set(p).add(i));
+
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.max(min, startW + (ev.clientX - startX));
+      setWidths((ws) => ws.map((w, j) => (j === i ? next : w)));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setResizing(null);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  /* duplo-clique no handle → restaura largura do Figma e volta a esticar (flex) */
+  const resetWidth = (i: number) => {
+    setPinned((p) => {
+      const n = new Set(p);
+      n.delete(i);
+      return n;
+    });
+    setWidths((ws) => ws.map((w, j) => (j === i ? COLUMNS[i].width : w)));
+  };
+
   return (
     <div className="app-shell">
       {/* Sidebar rail — Figma: largura 52, ícones centrados */}
@@ -266,24 +336,44 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
           </div>
 
           {/* Tabela */}
-          <div style={{ border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-8)', overflow: 'hidden' }}>
-            {/* Cabeçalho */}
+          <div className="lc-table" style={{ border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-8)' }}>
+            {/* Cabeçalho — colunas redimensionáveis */}
             <div
+              className="lc-thead"
               style={{
                 display: 'grid',
-                gridTemplateColumns: gridCols,
+                gridTemplateColumns: gridTemplate,
                 columnGap: 'var(--spacing-16)',
                 alignItems: 'center',
                 background: 'var(--color-bg-card)',
                 padding: '0 var(--spacing-16)',
               }}
             >
-              <HeaderCell sortable>Objeto do contrato</HeaderCell>
-              <HeaderCell>Setores beneficiados</HeaderCell>
-              <HeaderCell sortable>Início de contrato</HeaderCell>
-              <HeaderCell sortable>Fim de contrato</HeaderCell>
-              <HeaderCell sortable>Valor do contrato</HeaderCell>
-              <HeaderCell sortable>Estado</HeaderCell>
+              {COLUMNS.map((col, i) => (
+                <div
+                  key={col.key}
+                  className={`lc-th${resizing === i ? ' lc-th--resizing' : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', padding: 'var(--spacing-12) var(--spacing-8)' }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {col.label}
+                  </span>
+                  {col.sortable && <ArrowUpDown size={15} strokeWidth={1.66} color="var(--color-icon-secondary)" style={{ flex: 'none' }} />}
+
+                  {/* Handle de redimensionamento — discreto, aparece no hover */}
+                  <div
+                    className={`lc-resizer${resizing === i ? ' lc-resizer--active' : ''}`}
+                    onMouseDown={(e) => startResize(i, e)}
+                    onDoubleClick={() => resetWidth(i)}
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Redimensionar coluna ${col.label}`}
+                    title="Arraste para redimensionar · duplo-clique para restaurar"
+                  >
+                    <span className="lc-resizer__line" />
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Linhas */}
@@ -293,7 +383,7 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                 className="lc-row"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: gridCols,
+                  gridTemplateColumns: gridTemplate,
                   columnGap: 'var(--spacing-16)',
                   alignItems: 'center',
                   minHeight: 80,
@@ -302,15 +392,15 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                 }}
               >
                 <Cell title>{c.objeto}</Cell>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)', padding: 'var(--spacing-8) 0' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)', padding: 'var(--spacing-8) 0', minWidth: 0 }}>
                   {c.setores.map((s) => (
                     <Tag key={s} tone="brand">{s}</Tag>
                   ))}
                 </div>
-                <Cell>{c.inicio}</Cell>
-                <Cell>{c.fim}</Cell>
+                <Cell tabular>{c.inicio}</Cell>
+                <Cell tabular>{c.fim}</Cell>
                 <Cell tabular>{c.valor}</Cell>
-                <div style={{ padding: 'var(--spacing-8) 0' }}>
+                <div style={{ padding: 'var(--spacing-8) 0', minWidth: 0 }}>
                   <Tag tone={ESTADO_TONE[c.estado]}>{ESTADO_LABEL[c.estado]}</Tag>
                 </div>
               </div>
@@ -326,6 +416,8 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                 padding: 'var(--spacing-8) var(--spacing-12)',
                 borderTop: '1px solid var(--color-border-default)',
                 background: 'var(--color-bg-card)',
+                position: 'sticky',
+                left: 0,
               }}
             >
               <span style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'right', paddingRight: 'var(--spacing-8)' }}>
@@ -356,25 +448,18 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
 /* Subcomponentes                                                              */
 /* -------------------------------------------------------------------------- */
 
-function HeaderCell({ children, sortable = false }: { children: ReactNode; sortable?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', padding: 'var(--spacing-12) var(--spacing-8)' }}>
-      <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)' }}>{children}</span>
-      {sortable && <ArrowUpDown size={15} strokeWidth={1.66} color="var(--color-icon-secondary)" />}
-    </div>
-  );
-}
-
 function Cell({ children, title = false, tabular = false }: { children: ReactNode; title?: boolean; tabular?: boolean }) {
   return (
     <div
       style={{
         padding: 'var(--spacing-8)',
+        minWidth: 0,
         fontSize: 14,
         lineHeight: '20px',
         color: title ? 'var(--color-text-title)' : 'var(--color-text-body)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
         fontVariantNumeric: tabular ? 'tabular-nums' : undefined,
       }}
     >

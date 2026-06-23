@@ -13,7 +13,7 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--color-text-body);
   background: var(--color-bg-page);
   -webkit-font-smoothing: antialiased;
