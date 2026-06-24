@@ -4,6 +4,8 @@ import {
   Filter,
   Plus,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -43,6 +45,7 @@ const ESTADO_TONE: Record<Estado, TagTone> = {
 type Contrato = {
   objeto: string;
   setores: string[];
+  uf: string;
   inicio: string;
   fim: string;
   valor: string;
@@ -53,71 +56,80 @@ const CONTRATOS: Contrato[] = [
   {
     objeto: 'Licença de software - Pacote Office Pro',
     setores: ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
-    inicio: '30/11/2026',
-    fim: '30/11/2026',
+    uf: 'SP',
+    inicio: '01/07/2025',
+    fim: '08/07/2026',
     valor: 'R$ 45.678,90',
     estado: 'fim-proximo',
   },
   {
     objeto: 'Licenças de software de design de interfaces - Figma',
     setores: ['Pesquisa e Desenv.'],
-    inicio: '27/10/2026',
-    fim: '27/10/2026',
+    uf: 'MG',
+    inicio: '15/08/2024',
+    fim: '15/08/2026',
     valor: 'R$ 78.901,23',
     estado: 'vigente',
   },
   {
     objeto: 'Sistema de controle de ponto',
     setores: ['Recursos Humanos'],
-    inicio: '19/09/2026',
-    fim: '19/09/2026',
+    uf: 'BA',
+    inicio: '30/09/2024',
+    fim: '30/09/2026',
     valor: 'R$ 34.567,89',
     estado: 'vigente',
   },
   {
     objeto: 'Licença SolidWorks',
     setores: ['Pesquisa e Desenv.'],
-    inicio: '10/08/2026',
-    fim: '10/08/2026',
+    uf: 'PE',
+    inicio: '25/11/2024',
+    fim: '25/11/2026',
     valor: 'R$ 23.456,78',
     estado: 'vigente',
   },
   {
     objeto: 'Licença de software para engenharia - AutoCAD',
     setores: ['Pesquisa e Desenv.', 'Engenharia Civil'],
-    inicio: '08/07/2026',
-    fim: '08/07/2026',
+    uf: 'RS',
+    inicio: '10/02/2025',
+    fim: '10/02/2027',
     valor: 'R$ 56.789,01',
     estado: 'vigente',
   },
   {
     objeto: 'Pacote empresarial de gestão de projetos - Atlassian Corporate',
     setores: ['Pesquisa e Desenv.', 'Gestão de Projetos', 'Suprimentos', 'Segurança do Trabalho'],
-    inicio: '22/06/2026',
-    fim: '22/06/2026',
+    uf: 'CE',
+    inicio: '03/12/2024',
+    fim: '18/06/2027',
     valor: 'R$ 67.890,12',
     estado: 'vigente',
   },
   {
     objeto: 'Licença Google Cloud IA - Workspace',
     setores: ['Pesquisa e Desenv.'],
-    inicio: '25/05/2026',
-    fim: '25/05/2026',
+    uf: 'PR',
+    inicio: '03/12/2023',
+    fim: '03/12/2027',
     valor: 'R$ 89.012,34',
     estado: 'vigente',
   },
   {
     objeto: 'Licença Figma Dev',
     setores: ['Pesquisa e Desenv.'],
-    inicio: '15/04/2026',
-    fim: '15/04/2026',
+    uf: 'RJ',
+    inicio: '01/09/2026',
+    fim: '01/09/2027',
     valor: 'R$ 12.345,67',
     estado: 'aguardando',
   },
   {
     objeto: 'Licença de software - Pacote Office Pro',
     setores: ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
-    inicio: '12/03/2026',
+    uf: 'PA',
+    inicio: '12/03/2023',
     fim: '12/03/2026',
     valor: 'R$ 10.234,56',
     estado: 'encerrado',
@@ -125,28 +137,76 @@ const CONTRATOS: Contrato[] = [
   {
     objeto: 'Licença Figma Dev',
     setores: ['Pesquisa e Desenv.'],
-    inicio: '04/02/2026',
-    fim: '04/02/2026',
+    uf: 'SC',
+    inicio: '20/01/2025',
+    fim: '20/01/2028',
     valor: 'R$ 43.210,98',
     estado: 'cancelado',
   },
 ];
 
-/* Colunas — larguras default do Figma (objeto 264 / setores 304 / início 160 /
-   fim 148 / valor 160 / estado 180). `sortable` espelha os ícones do Figma. */
-type ColKey = 'objeto' | 'setores' | 'inicio' | 'fim' | 'valor' | 'estado';
+/* Colunas — larguras default do Figma (objeto 296 / setores 304 / UF 60 /
+   início 100 / fim 100 / valor 160 / estado 180). UF, Início e Fim começam no
+   width mínimo (Figma node 63:8893). `sortable` espelha os ícones do Figma. */
+type ColKey = 'objeto' | 'setores' | 'uf' | 'inicio' | 'fim' | 'valor' | 'estado';
 
 const COLUMNS: { key: ColKey; label: string; sortable: boolean; width: number }[] = [
-  { key: 'objeto', label: 'Objeto do contrato', sortable: true, width: 264 },
+  { key: 'objeto', label: 'Objeto do contrato', sortable: true, width: 296 },
   { key: 'setores', label: 'Setores beneficiados', sortable: false, width: 304 },
-  { key: 'inicio', label: 'Início de contrato', sortable: true, width: 160 },
-  { key: 'fim', label: 'Fim de contrato', sortable: true, width: 148 },
+  { key: 'uf', label: 'UF', sortable: true, width: 60 },
+  { key: 'inicio', label: 'Início', sortable: true, width: 100 },
+  { key: 'fim', label: 'Fim', sortable: true, width: 100 },
   { key: 'valor', label: 'Valor do contrato', sortable: true, width: 160 },
   { key: 'estado', label: 'Estado', sortable: true, width: 180 },
 ];
 
 /* colunas que esticam p/ preencher o espaço: Objeto (0) e Setores (1) */
 const FLEX_COLS = new Set([0, 1]);
+
+/* -------------------------------------------------------------------------- */
+/* Ordenação                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/* colunas ordenáveis por clique e seu tipo de comparação */
+type SortKey = 'objeto' | 'uf' | 'inicio' | 'fim' | 'valor' | 'estado';
+const SORT_TYPE: Record<SortKey, 'texto' | 'data' | 'numero' | 'estado'> = {
+  objeto: 'texto',
+  uf: 'texto',
+  inicio: 'data',
+  fim: 'data',
+  valor: 'numero',
+  estado: 'estado',
+};
+
+/* prioridade dos estados — é a ordenação padrão (principal) da tabela */
+const ESTADO_ORDER: Record<Estado, number> = {
+  'fim-proximo': 0,
+  vigente: 1,
+  aguardando: 2,
+  encerrado: 3,
+  cancelado: 4,
+};
+
+type SortState = { key: SortKey; dir: 'asc' | 'desc' };
+
+/* dd/mm/aaaa → timestamp */
+const parseData = (s: string) => {
+  const [d, m, y] = s.split('/').map(Number);
+  return new Date(y, m - 1, d).getTime();
+};
+/* "R$ 45.678,90" → 45678.9 */
+const parseValor = (s: string) =>
+  Number(s.replace(/[^\d,]/g, '').replace(/\./g, '').replace(',', '.'));
+
+/* compara duas linhas pela coluna `key` (sempre crescente; dir trata o sentido) */
+const compararLinhas = (a: Contrato, b: Contrato, key: SortKey) => {
+  if (SORT_TYPE[key] === 'numero') return parseValor(a.valor) - parseValor(b.valor);
+  if (SORT_TYPE[key] === 'data') return parseData(a[key as 'inicio' | 'fim']) - parseData(b[key as 'inicio' | 'fim']);
+  /* estado: prioridade + desempate por fim mais próximo (espelha a ordem padrão) */
+  if (SORT_TYPE[key] === 'estado')
+    return ESTADO_ORDER[a.estado] - ESTADO_ORDER[b.estado] || parseData(a.fim) - parseData(b.fim);
+  return (a[key as 'objeto' | 'uf']).localeCompare(b[key as 'objeto' | 'uf'], 'pt');
+};
 
 /* -------------------------------------------------------------------------- */
 /* Página                                                                      */
@@ -159,6 +219,24 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
   const [resizing, setResizing] = useState<number | null>(null);
   /* colunas flex que o usuário arrastou — saem do 1fr e viram px fixo */
   const [pinned, setPinned] = useState<Set<number>>(() => new Set());
+  /* ordenação atual — null = ordem padrão (agrupada por estado) */
+  const [sort, setSort] = useState<SortState | null>(null);
+
+  /* clique no cabeçalho: asc → desc → padrão (3º clique). Só 1 coluna por vez. */
+  const toggleSort = (key: SortKey) =>
+    setSort((cur) => {
+      if (!cur || cur.key !== key) return { key, dir: 'asc' };
+      if (cur.dir === 'asc') return { key, dir: 'desc' };
+      return null;
+    });
+
+  /* linhas exibidas — ordenadas, ou a ordem padrão do mock quando sort = null */
+  const rows = sort
+    ? [...CONTRATOS].sort((a, b) => {
+        const c = compararLinhas(a, b, sort.key);
+        return sort.dir === 'asc' ? c : -c;
+      })
+    : CONTRATOS;
 
   /* Objeto (0) e Setores (1) crescem p/ preencher a largura sobrando (1fr) — até
      o usuário arrastá-las: aí entram em `pinned`, viram px fixo e encolhem
@@ -349,16 +427,50 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                 padding: '0 var(--spacing-16)',
               }}
             >
-              {COLUMNS.map((col, i) => (
+              {COLUMNS.map((col, i) => {
+                const sortKey = col.key in SORT_TYPE ? (col.key as SortKey) : null;
+                const active = sort && sortKey && sort.key === sortKey;
+                /* Setores e Estado: célula sem padding-esquerdo p/ alinhar o título
+                   ao início das tags (que não têm padding lateral) */
+                const semPadEsq = col.key === 'setores' || col.key === 'estado';
+                return (
                 <div
                   key={col.key}
                   className={`lc-th${resizing === i ? ' lc-th--resizing' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', padding: 'var(--spacing-12) var(--spacing-8)' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', padding: '12px 8px 12px', paddingLeft: semPadEsq ? 0 : 'var(--spacing-8)' }}
                 >
-                  <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {col.label}
-                  </span>
-                  {col.sortable && <ArrowUpDown size={15} strokeWidth={1.66} color="var(--color-icon-secondary)" style={{ flex: 'none' }} />}
+                  <div
+                    onClick={sortKey ? () => toggleSort(sortKey) : undefined}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--spacing-8)',
+                      flex: 1,
+                      minWidth: 0,
+                      cursor: sortKey ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      /* realce da coluna ativamente ordenada — margens negativas
+                         compensam o padding p/ não consumir largura (evita corte) */
+                      padding: 'var(--spacing-4) var(--spacing-8)',
+                      margin: '0 -8px',
+                      borderRadius: 'var(--radius-4)',
+                      background: active ? 'var(--color-brand-subtle)' : 'transparent',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {col.label}
+                    </span>
+                    {col.sortable &&
+                      (active ? (
+                        sort.dir === 'asc' ? (
+                          <ArrowUp size={15} strokeWidth={2} color="var(--color-brand-default)" style={{ flex: 'none' }} />
+                        ) : (
+                          <ArrowDown size={15} strokeWidth={2} color="var(--color-brand-default)" style={{ flex: 'none' }} />
+                        )
+                      ) : (
+                        <ArrowUpDown size={15} strokeWidth={1.66} color="var(--color-icon-secondary)" style={{ flex: 'none' }} />
+                      ))}
+                  </div>
 
                   {/* Handle de redimensionamento — discreto, aparece no hover */}
                   <div
@@ -373,11 +485,12 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                     <span className="lc-resizer__line" />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Linhas */}
-            {CONTRATOS.map((c, i) => (
+            {rows.map((c, i) => (
               <div
                 key={i}
                 className="lc-row"
@@ -391,12 +504,13 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                   borderTop: `1px solid ${i === 0 ? 'var(--color-border-default)' : 'var(--color-border-subtle)'}`,
                 }}
               >
-                <Cell title>{c.objeto}</Cell>
+                <Cell title clamp>{c.objeto}</Cell>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)', padding: 'var(--spacing-8) 0', minWidth: 0 }}>
                   {c.setores.map((s) => (
                     <Tag key={s} tone="brand">{s}</Tag>
                   ))}
                 </div>
+                <Cell>{c.uf}</Cell>
                 <Cell tabular>{c.inicio}</Cell>
                 <Cell tabular>{c.fim}</Cell>
                 <Cell tabular>{c.valor}</Cell>
@@ -448,7 +562,7 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
 /* Subcomponentes                                                              */
 /* -------------------------------------------------------------------------- */
 
-function Cell({ children, title = false, tabular = false }: { children: ReactNode; title?: boolean; tabular?: boolean }) {
+function Cell({ children, title = false, tabular = false, clamp = false }: { children: ReactNode; title?: boolean; tabular?: boolean; clamp?: boolean }) {
   return (
     <div
       style={{
@@ -458,8 +572,10 @@ function Cell({ children, title = false, tabular = false }: { children: ReactNod
         lineHeight: '20px',
         color: title ? 'var(--color-text-title)' : 'var(--color-text-body)',
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        /* clamp: trunca com (...) após 2 linhas; senão, 1 linha */
+        ...(clamp
+          ? { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, whiteSpace: 'normal' }
+          : { textOverflow: 'ellipsis', whiteSpace: 'nowrap' }),
         fontVariantNumeric: tabular ? 'tabular-nums' : undefined,
       }}
     >
