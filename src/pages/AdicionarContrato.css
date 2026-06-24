@@ -19,3 +19,60 @@
   background: var(--color-error-subtle);
   color: var(--color-error-default);
 }
+
+/* Input de campo — reseta aparência nativa; herda layout do wrapper .field */
+.field-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text-body);
+  outline: none;
+}
+.field-input::placeholder {
+  color: var(--cinza-700);
+}
+.field-input:disabled {
+  cursor: not-allowed;
+  color: var(--color-text-disabled);
+  -webkit-text-fill-color: var(--color-text-disabled);
+}
+.field-input:disabled::placeholder {
+  color: var(--color-text-disabled);
+}
+
+/* Spinner de processamento — Figma node 94:3535 (estado de análise) */
+.upload-spinner {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--radius-full);
+  border: 3px solid var(--cinza-300);
+  border-top-color: var(--color-brand-default);
+  animation: upload-spin 0.8s linear infinite;
+}
+@keyframes upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton shimmer — Figma: gradiente #f1efef → #f9f8f8 → #e7e5e5, radius 6 */
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1efef 25%, #f9f8f8 50%, #e7e5e5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

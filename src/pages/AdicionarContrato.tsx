@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import './AdicionarContrato.css';
 import contratoPreview from '../assets/contrato-preview.png';
@@ -115,12 +115,55 @@ const CalendarIcon = () => (
 /* Página                                                                      */
 /* -------------------------------------------------------------------------- */
 
+const FORM_VAZIO = {
+  objeto: '',
+  valor: '',
+  dataInicio: '',
+  dataFim: '',
+  empresa: '',
+  cnpj: '',
+  representante: '',
+  cpf: '',
+};
+
 export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
   const [uploaded, setUploaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fileName, setFileName] = useState('');
   const [setores, setSetores] = useState(SETORES_INICIAIS);
+  const [form, setForm] = useState(FORM_VAZIO);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const toggle = (i: number) =>
+  /* Upload: lê o arquivo, mostra carregamento por 3s e extrai os dados */
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setLoading(true);
+    setTimeout(() => {
+      setForm({
+        objeto: CONTRATO.objeto,
+        valor: CONTRATO.valor,
+        dataInicio: CONTRATO.dataInicio,
+        dataFim: CONTRATO.dataFim,
+        empresa: CONTRATO.empresa,
+        cnpj: CONTRATO.cnpj,
+        representante: CONTRATO.representante,
+        cpf: CONTRATO.cpf,
+      });
+      setLoading(false);
+      setUploaded(true);
+    }, 3000);
+    e.target.value = '';
+  };
+
+  const setField = (campo: keyof typeof FORM_VAZIO) => (e: { target: { value: string } }) =>
+    setForm((f) => ({ ...f, [campo]: e.target.value }));
+
+  const toggle = (i: number) => {
+    if (!uploaded) return;
     setSetores((s) => s.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)));
+  };
 
   return (
     <div className="app-shell">
@@ -224,16 +267,17 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               Cancelar
             </button>
             <button
+              disabled={!uploaded}
               style={{
                 height: 36,
                 padding: '0 var(--spacing-16)',
                 borderRadius: 'var(--radius-8)',
-                border: '1px solid var(--color-brand-default)',
-                background: 'var(--color-brand-default)',
-                color: 'var(--color-text-inverse)',
+                border: `1px solid ${uploaded ? 'var(--color-brand-default)' : 'var(--cinza-400)'}`,
+                background: uploaded ? 'var(--color-brand-default)' : 'var(--cinza-400)',
+                color: uploaded ? 'var(--color-text-inverse)' : 'var(--cinza-700)',
                 fontSize: 14,
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: uploaded ? 'pointer' : 'not-allowed',
               }}
             >
               Salvar contrato
@@ -253,19 +297,27 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               overflow: 'hidden',
             }}
           >
-            {/* Cabeçalho — Figma: altura 48, padding 16, nome do arquivo + paginação */}
-            <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--spacing-16)', borderBottom: '1px solid var(--cinza-200)' }}>
-              <span style={{ fontSize: 14, color: uploaded ? 'var(--color-text-body)' : 'var(--color-text-secondary)' }}>
-                {uploaded ? 'contrato.pdf' : 'Sem arquivos adicionados'}
+            {/* Cabeçalho — Figma 60:1137: padding 16/8, borda default, caption 12 */}
+            <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--spacing-16)', borderBottom: '1px solid var(--color-border-default)' }}>
+              <span style={{ fontSize: 12, lineHeight: '16px', color: uploaded ? 'var(--color-text-body)' : 'var(--color-text-secondary)' }}>
+                {uploaded ? fileName : 'Sem arquivos adicionados'}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 24, border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-8)', color: 'var(--color-text-body)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 24, border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-4)', color: 'var(--color-text-body)' }}>
                   {uploaded ? '1' : '-'}
                 </span>
-                <span>{uploaded ? '/ 16' : '/ -'}</span>
+                <span style={{ width: 36, textAlign: 'center' }}>{uploaded ? '/ 16' : '/ -'}</span>
               </div>
             </div>
-            {/* Corpo — pré-upload: dropzone; pós-upload: página do documento */}
+            {/* Input de arquivo real (oculto) — acionado pela dropzone */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={handleFile}
+              style={{ display: 'none' }}
+            />
+            {/* Corpo — pós-upload: página; carregando: spinner; pré: dropzone */}
             {uploaded ? (
               <div style={{ padding: 'var(--spacing-16)', background: 'var(--cinza-300)' }}>
                 <img
@@ -274,30 +326,58 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                   style={{ display: 'block', width: '100%', height: 'auto', background: 'var(--color-bg-card)', borderRadius: 'var(--radius-8)' }}
                 />
               </div>
+            ) : loading ? (
+              <div style={{ padding: 'var(--spacing-16)', background: 'var(--cinza-300)' }}>
+                <div
+                  style={{
+                    minHeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'var(--spacing-16)',
+                    padding: 'var(--spacing-24)',
+                    border: '1px dashed #616161',
+                    borderRadius: 'var(--radius-8)',
+                    background: 'var(--color-bg-card)',
+                  }}
+                >
+                  <span className="upload-spinner" />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)' }}>
+                      Aguarde enquanto o arquivo é processado
+                    </span>
+                    <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
+                      Em poucos segundos seu arquivo estará pronto
+                    </span>
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div style={{ padding: 'var(--spacing-16)' }}>
+              <div style={{ padding: 'var(--spacing-16)', background: 'var(--cinza-300)', boxShadow: '0px 2px 8px rgba(0, 51, 51, 0.12)' }}>
                 <button
-                  onClick={() => setUploaded(true)}
+                  onClick={() => fileInputRef.current?.click()}
                   style={{
                     width: '100%',
                     minHeight: 600,
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 'var(--spacing-8)',
-                    padding: 'var(--spacing-24)',
-                    border: '1.5px dashed var(--color-border-strong)',
+                    gap: 'var(--spacing-16)',
+                    padding: 'var(--spacing-8) var(--spacing-16) var(--spacing-8) var(--spacing-24)',
+                    border: '1px dashed #616161',
                     borderRadius: 'var(--radius-8)',
                     background: 'var(--color-bg-card)',
                     cursor: 'pointer',
                   }}
                 >
                   <UploadIcon />
-                  <span style={{ fontSize: 14, color: 'var(--color-text-body)' }}>
-                    <span style={{ color: 'var(--color-brand-default)', fontWeight: 600 }}>Clique aqui</span> ou arraste e solte o arquivo
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px' }}>
+                      <span style={{ color: 'var(--color-brand-default)' }}>Clique aqui</span>
+                      <span style={{ color: 'var(--color-text-title)' }}> ou arraste e solte o arquivo</span>
+                    </span>
+                    <span style={{ fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>Arquivo em PDF e tamanho máximo de 50MB</span>
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Arquivo em PDF e tamanho máximo de 50MB</span>
                 </button>
               </div>
             )}
@@ -328,27 +408,30 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               </h1>
             </div>
 
-            {/* Corpo — padding 16 (Figma) */}
+            {/* Corpo — padding 16 (Figma). Carregando: skeleton */}
+            {loading ? (
+              <FormSkeleton />
+            ) : (
             <div style={{ padding: 'var(--spacing-16)' }}>
               {/* Dados gerais */}
               <div>
                 <div style={sectionTitle}>Dados gerais</div>
                 <div style={{ marginBottom: 'var(--spacing-16)' }}>
                   <label style={fieldLabel}>Objeto do contrato</label>
-                  <FieldValue filled={uploaded} value={CONTRATO.objeto} placeholder={PLACEHOLDERS.objeto} />
+                  <Field disabled={!uploaded} value={form.objeto} onChange={setField('objeto')} placeholder={PLACEHOLDERS.objeto} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
                   <div>
                     <label style={fieldLabel}>Valor do contrato</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.valor} placeholder={PLACEHOLDERS.valor} />
+                    <Field disabled={!uploaded} value={form.valor} onChange={setField('valor')} placeholder={PLACEHOLDERS.valor} />
                   </div>
                   <div>
                     <label style={fieldLabel}>Data de início do contrato</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.dataInicio} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
+                    <Field disabled={!uploaded} value={form.dataInicio} onChange={setField('dataInicio')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
                   </div>
                   <div>
                     <label style={fieldLabel}>Data de fim de contrato</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.dataFim} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
+                    <Field disabled={!uploaded} value={form.dataFim} onChange={setField('dataFim')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
                   </div>
                 </div>
               </div>
@@ -359,19 +442,19 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--spacing-16)' }}>
                   <div>
                     <label style={fieldLabel}>Nome da empresa contratada</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.empresa} placeholder={PLACEHOLDERS.empresa} />
+                    <Field disabled={!uploaded} value={form.empresa} onChange={setField('empresa')} placeholder={PLACEHOLDERS.empresa} />
                   </div>
                   <div>
                     <label style={fieldLabel}>CNPJ</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.cnpj} placeholder={PLACEHOLDERS.cnpj} />
+                    <Field disabled={!uploaded} value={form.cnpj} onChange={setField('cnpj')} placeholder={PLACEHOLDERS.cnpj} />
                   </div>
                   <div>
                     <label style={fieldLabel}>Representante da empresa contratada</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.representante} placeholder={PLACEHOLDERS.representante} />
+                    <Field disabled={!uploaded} value={form.representante} onChange={setField('representante')} placeholder={PLACEHOLDERS.representante} />
                   </div>
                   <div>
                     <label style={fieldLabel}>CPF</label>
-                    <FieldValue filled={uploaded} value={CONTRATO.cpf} placeholder={PLACEHOLDERS.cpf} />
+                    <Field disabled={!uploaded} value={form.cpf} onChange={setField('cpf')} placeholder={PLACEHOLDERS.cpf} />
                   </div>
                 </div>
               </div>
@@ -462,6 +545,7 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                     <button
                       key={setor.nome}
                       onClick={() => toggle(i)}
+                      disabled={!uploaded}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -470,11 +554,15 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                         height: 44,
                         padding: '0 var(--spacing-16)',
                         borderRadius: 'var(--radius-8)',
-                        border: `1px solid ${setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
-                        background: setor.checked ? 'var(--color-brand-muted)' : 'var(--color-bg-card)',
-                        cursor: 'pointer',
+                        border: `1px solid ${!uploaded ? 'var(--cinza-300)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
+                        background: !uploaded
+                          ? 'var(--cinza-200)'
+                          : setor.checked
+                            ? 'var(--color-brand-muted)'
+                            : 'var(--color-bg-card)',
+                        cursor: uploaded ? 'pointer' : 'not-allowed',
                         fontSize: 14,
-                        color: 'var(--color-text-body)',
+                        color: uploaded ? 'var(--color-text-body)' : 'var(--color-text-disabled)',
                       }}
                     >
                       <span
@@ -483,7 +571,7 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                           height: 20,
                           flex: 'none',
                           borderRadius: 'var(--radius-4)',
-                          border: `1.5px solid ${setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
+                          border: `1.5px solid ${!uploaded ? 'var(--color-icon-disabled)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
                           background: setor.checked ? 'var(--color-brand-default)' : 'var(--color-bg-card)',
                           display: 'flex',
                           alignItems: 'center',
@@ -505,6 +593,7 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                 </div>
               </div>
             </div>
+            )}
           </section>
         </main>
       </div>
@@ -516,37 +605,137 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
 /* Subcomponentes                                                              */
 /* -------------------------------------------------------------------------- */
 
-/* Valor de campo — mostra o valor (pós-upload) ou placeholder esmaecido */
-function FieldValue({
-  filled,
+/* Barra de skeleton — shimmer (classe .skeleton no CSS) */
+const Bar = ({ w, h = 20 }: { w: number | string; h?: number }) => (
+  <div className="skeleton" style={{ width: w, height: h }} />
+);
+
+/* Skeleton do formulário — exibido durante o processamento (Figma 94:3535) */
+function FormSkeleton() {
+  const labeled = (largura: number | string) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-8)' }}>
+      <Bar w={96} h={16} />
+      <Bar w={largura} h={36} />
+    </div>
+  );
+
+  return (
+    <div style={{ padding: 'var(--spacing-16)' }}>
+      {/* Dados gerais */}
+      <div>
+        <div style={sectionTitle}>Dados gerais</div>
+        <div style={{ marginBottom: 'var(--spacing-16)' }}>{labeled('100%')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
+          {labeled('100%')}
+          {labeled('100%')}
+          {labeled('100%')}
+        </div>
+      </div>
+
+      {/* Dados do contratado */}
+      <div style={sectionDivider}>
+        <div style={sectionTitle}>Dados do contratado</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--spacing-16)' }}>
+          {labeled('100%')}
+          {labeled('100%')}
+          {labeled('100%')}
+          {labeled('100%')}
+        </div>
+      </div>
+
+      {/* Itens contratados */}
+      <div style={sectionDivider}>
+        <div style={sectionTitle}>Itens contratados</div>
+        <div style={{ border: '1px solid var(--color-border-default)', borderRadius: 'var(--radius-8)', overflow: 'hidden' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: gridCols,
+              columnGap: 'var(--spacing-16)',
+              alignItems: 'center',
+              height: 40,
+              padding: '0 var(--spacing-16)',
+              fontSize: 14,
+              fontWeight: 600,
+              lineHeight: '20px',
+              color: 'var(--color-text-title)',
+            }}
+          >
+            <div>Descrição</div>
+            <div>Unidade</div>
+            <div style={{ textAlign: 'right' }}>Quant.</div>
+            <div style={{ textAlign: 'right' }}>Valor Unit.</div>
+            <div style={{ textAlign: 'right' }}>Valor total</div>
+            <div />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 92, padding: '0 var(--spacing-16)', borderTop: '1px solid var(--color-border-default)' }}>
+            <Bar w={312} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, padding: '0 var(--spacing-16)', borderTop: '1px solid var(--color-border-default)' }}>
+            <Bar w={108} />
+            <Bar w={196} />
+          </div>
+        </div>
+      </div>
+
+      {/* Setor(es) beneficiado(s) */}
+      <div style={sectionDivider}>
+        <div style={{ ...sectionTitle, marginBottom: 'var(--spacing-4)' }}>Setor(es) beneficiado(s)</div>
+        <p style={{ margin: '0 0 var(--spacing-12)', fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
+          Informe os setores da empresa que serão atendidos por este contrato
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', height: 44 }}>
+              <Bar w={18} h={18} />
+              <Bar w={`${50 + ((i * 17) % 40)}%`} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Campo editável — desabilitado antes do upload, liberado depois */
+function Field({
+  disabled,
   value,
+  onChange,
   placeholder,
   icon,
 }: {
-  filled: boolean;
+  disabled: boolean;
   value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
   icon?: ReactNode;
 }) {
   return (
-    <div style={{ ...field, gap: icon ? 'var(--spacing-8)' : 0 }}>
+    <div
+      style={{
+        ...field,
+        gap: icon ? 'var(--spacing-8)' : 0,
+        background: disabled ? 'var(--cinza-200)' : 'var(--color-bg-card)',
+        borderColor: disabled ? 'var(--cinza-300)' : 'var(--color-border-default)',
+        cursor: disabled ? 'not-allowed' : 'text',
+      }}
+    >
       {icon}
-      <span
-        style={{
-          color: filled ? 'var(--color-text-body)' : 'var(--cinza-700)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {filled ? value : placeholder}
-      </span>
+      <input
+        className="field-input"
+        type="text"
+        disabled={disabled}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
 
 const UploadIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-default)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 'var(--spacing-8)' }}>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand-default)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <path d="M17 8l-5-5-5 5" />
     <path d="M12 3v12" />
