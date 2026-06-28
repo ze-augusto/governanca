@@ -37,6 +37,59 @@
   border-radius: var(--radius-8);
 }
 
+/* Toast de sucesso — fixo 12px abaixo da topbar (68) e 24px do limite direito.
+   Surge de cima, desce suave; sai pra cima ao fim dos 3s. */
+.lc-toast {
+  position: fixed;
+  top: 80px;
+  right: var(--spacing-24);
+  z-index: 50;
+  width: 384px;
+  max-width: calc(100vw - var(--sidenav-width) - var(--spacing-36) - var(--spacing-24));
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-12);
+  padding: var(--spacing-16) var(--spacing-16) var(--spacing-16) var(--spacing-24);
+  background: var(--color-success-subtle);
+  border: 1px solid #cfe6d5;
+  border-radius: var(--radius-8);
+  box-shadow: 0 8px 24px rgba(0, 30, 60, 0.12);
+  overflow: hidden;
+  animation: lc-toast-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lc-toast--out {
+  animation: lc-toast-out 0.3s ease forwards;
+}
+/* barra de acento verde à esquerda */
+.lc-toast__accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--color-success-default);
+}
+@keyframes lc-toast-in {
+  from {
+    transform: translateY(-72px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes lc-toast-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-72px);
+    opacity: 0;
+  }
+}
+
 /* Linha da tabela — destaque no hover */
 .lc-row {
   background: var(--color-bg-card);

@@ -19,6 +19,15 @@
   background: var(--color-error-subtle);
   color: var(--color-error-default);
 }
+/* Confirmar edição de item — quadrado preenchido com a cor da marca */
+.icon-btn--primary {
+  background: var(--color-brand-default);
+  color: var(--color-text-inverse);
+}
+.icon-btn--primary:hover {
+  background: var(--color-brand-hover);
+  color: var(--color-text-inverse);
+}
 
 /* Input de campo — reseta aparência nativa; herda layout do wrapper .field */
 .field-input {
@@ -61,12 +70,50 @@
   }
 }
 
+/* Botões da top bar — espelham os da lista de contratos (hover incluso) */
+.ac-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  height: 36px;
+  padding: 0 var(--spacing-16);
+  border-radius: var(--radius-8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.ac-btn--secondary {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-body);
+}
+.ac-btn--secondary:hover {
+  background: var(--color-bg-hover);
+}
+.ac-btn--primary {
+  background: var(--color-brand-default);
+  border: 1px solid var(--color-brand-default);
+  color: var(--color-text-inverse);
+}
+.ac-btn--primary:hover {
+  background: var(--color-brand-hover);
+  border-color: var(--color-brand-hover);
+}
+.ac-btn--disabled {
+  background: var(--cinza-400);
+  border: 1px solid var(--cinza-400);
+  color: var(--cinza-700);
+  cursor: not-allowed;
+}
+
 /* Skeleton shimmer — Figma: gradiente #f1efef → #f9f8f8 → #e7e5e5, radius 6 */
 .skeleton {
   border-radius: 6px;
   background: linear-gradient(90deg, #f1efef 25%, #f9f8f8 50%, #e7e5e5 75%);
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  animation: skeleton-shimmer 5.6s ease-in-out infinite;
 }
 @keyframes skeleton-shimmer {
   0% {
