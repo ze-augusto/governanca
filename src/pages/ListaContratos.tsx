@@ -1,16 +1,18 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   Search,
   Filter,
   Plus,
   ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
+  ArrowUpNarrowWide,
+  ArrowDownWideNarrow,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ChevronDown,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import './ListaContratos.css';
 
@@ -18,14 +20,14 @@ import './ListaContratos.css';
 /* Dados (mock — vindos do Figma node 63:8893)                                 */
 /* -------------------------------------------------------------------------- */
 
-type Estado =
+export type Estado =
   | 'fim-proximo'
   | 'vigente'
   | 'aguardando'
   | 'encerrado'
   | 'cancelado';
 
-const ESTADO_LABEL: Record<Estado, string> = {
+export const ESTADO_LABEL: Record<Estado, string> = {
   'fim-proximo': 'Fim de contrato próximo',
   vigente: 'Vigente',
   aguardando: 'Aguardando início',
@@ -34,7 +36,7 @@ const ESTADO_LABEL: Record<Estado, string> = {
 };
 
 /* mapeia o estado do contrato para o tom visual da tag */
-const ESTADO_TONE: Record<Estado, TagTone> = {
+export const ESTADO_TONE: Record<Estado, TagTone> = {
   'fim-proximo': 'error',
   vigente: 'success',
   aguardando: 'warning',
@@ -42,7 +44,16 @@ const ESTADO_TONE: Record<Estado, TagTone> = {
   cancelado: 'neutral',
 };
 
-type Contrato = {
+/* item de um contrato — mesma forma usada na tabela de itens e no PDF */
+export type ContratoItem = {
+  desc: string;
+  unidade: string;
+  quant: string;
+  unit: string;
+  total: string;
+};
+
+export type Contrato = {
   objeto: string;
   setores: string[];
   uf: string;
@@ -50,99 +61,139 @@ type Contrato = {
   fim: string;
   valor: string;
   estado: Estado;
+  itens: ContratoItem[];
+};
+
+/* "R$ 1.234,56" a partir de um número */
+const brl = (n: number) =>
+  'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* linha crua [descrição, unidade, qtd, valor unit.] → item formatado.
+   quant é sempre numérico (só o número) — a natureza fica na coluna "unidade". */
+type LinhaItem = [desc: string, unidade: string, qtd: number, valorUnit: number];
+const montarItens = (linhas: LinhaItem[]) => {
+  const itens = linhas.map<ContratoItem>(([desc, unidade, qtd, vu]) => ({
+    desc,
+    unidade,
+    quant: String(qtd),
+    unit: brl(vu),
+    total: brl(qtd * vu),
+  }));
+  /* valor do contrato = soma dos itens (mantém lista e PDF coerentes) */
+  const valor = brl(linhas.reduce((s, [, , qtd, vu]) => s + qtd * vu, 0));
+  return { itens, valor };
+};
+
+/* monta um contrato completo; valor é derivado dos itens */
+const mk = (
+  objeto: string,
+  setores: string[],
+  uf: string,
+  inicio: string,
+  fim: string,
+  estado: Estado,
+  linhas: LinhaItem[],
+): Contrato => {
+  const { itens, valor } = montarItens(linhas);
+  return { objeto, setores, uf, inicio, fim, valor, estado, itens };
 };
 
 const CONTRATOS: Contrato[] = [
-  {
-    objeto: 'Licença de software - Pacote Office Pro',
-    setores: ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
-    uf: 'SP',
-    inicio: '01/07/2025',
-    fim: '08/07/2026',
-    valor: 'R$ 45.678,90',
-    estado: 'fim-proximo',
-  },
-  {
-    objeto: 'Licenças de software de design de interfaces - Figma',
-    setores: ['Pesquisa e Desenv.'],
-    uf: 'MG',
-    inicio: '15/08/2024',
-    fim: '15/08/2026',
-    valor: 'R$ 78.901,23',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Sistema de controle de ponto',
-    setores: ['Recursos Humanos'],
-    uf: 'BA',
-    inicio: '30/09/2024',
-    fim: '30/09/2026',
-    valor: 'R$ 34.567,89',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Licença SolidWorks',
-    setores: ['Pesquisa e Desenv.'],
-    uf: 'PE',
-    inicio: '25/11/2024',
-    fim: '25/11/2026',
-    valor: 'R$ 23.456,78',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Licença de software para engenharia - AutoCAD',
-    setores: ['Pesquisa e Desenv.', 'Engenharia Civil'],
-    uf: 'RS',
-    inicio: '10/02/2025',
-    fim: '10/02/2027',
-    valor: 'R$ 56.789,01',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Pacote empresarial de gestão de projetos - Atlassian Corporate',
-    setores: ['Pesquisa e Desenv.', 'Gestão de Projetos', 'Suprimentos', 'Segurança do Trabalho'],
-    uf: 'CE',
-    inicio: '03/12/2024',
-    fim: '18/06/2027',
-    valor: 'R$ 67.890,12',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Licença Google Cloud IA - Workspace',
-    setores: ['Pesquisa e Desenv.'],
-    uf: 'PR',
-    inicio: '03/12/2023',
-    fim: '03/12/2027',
-    valor: 'R$ 89.012,34',
-    estado: 'vigente',
-  },
-  {
-    objeto: 'Licença Figma Dev',
-    setores: ['Pesquisa e Desenv.'],
-    uf: 'RJ',
-    inicio: '01/09/2026',
-    fim: '01/09/2027',
-    valor: 'R$ 12.345,67',
-    estado: 'aguardando',
-  },
-  {
-    objeto: 'Licença de software - Pacote Office Pro',
-    setores: ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
-    uf: 'PA',
-    inicio: '12/03/2023',
-    fim: '12/03/2026',
-    valor: 'R$ 10.234,56',
-    estado: 'encerrado',
-  },
-  {
-    objeto: 'Licença Figma Dev',
-    setores: ['Pesquisa e Desenv.'],
-    uf: 'SC',
-    inicio: '20/01/2025',
-    fim: '20/01/2028',
-    valor: 'R$ 43.210,98',
-    estado: 'cancelado',
-  },
+  mk(
+    'Licença de software - Pacote Office Pro',
+    ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
+    'SP', '01/07/2025', '08/07/2026', 'fim-proximo',
+    [
+      ['Licença Microsoft 365 Business Standard', 'Anual', 40, 1080.0],
+      ['Suporte e migração de dados', 'Serviço', 1, 2478.9],
+    ],
+  ),
+  mk(
+    'Licenças de software de design de interfaces - Figma',
+    ['Pesquisa e Desenv.'],
+    'MG', '15/08/2024', '15/08/2026', 'vigente',
+    [
+      ['Licença Figma Organization', 'Anual', 45, 1017.59],
+      ['Licença Figma Dev', 'Anual', 100, 305.28],
+      ['Suporte premium', 'Serviço', 1, 2581.68],
+    ],
+  ),
+  mk(
+    'Sistema de controle de ponto',
+    ['Recursos Humanos'],
+    'BA', '30/09/2024', '30/09/2026', 'vigente',
+    [
+      ['Plataforma de controle de ponto (SaaS)', 'Mensal', 24, 1200.0],
+      ['Relógios de ponto biométricos', 'Unidade', 8, 650.0],
+      ['Configuração inicial', 'Serviço', 1, 567.89],
+    ],
+  ),
+  mk(
+    'Licença SolidWorks',
+    ['Pesquisa e Desenv.'],
+    'PE', '25/11/2024', '25/11/2026', 'vigente',
+    [
+      ['Licença SolidWorks Professional', 'Anual', 5, 4200.0],
+      ['Treinamento de equipe', 'Serviço', 1, 2456.78],
+    ],
+  ),
+  mk(
+    'Licença de software para engenharia - AutoCAD',
+    ['Pesquisa e Desenv.', 'Engenharia Civil'],
+    'RS', '10/02/2025', '10/02/2027', 'vigente',
+    [
+      ['Licença AutoCAD LT', 'Anual', 20, 2500.0],
+      ['Licença AutoCAD Plant 3D', 'Anual', 2, 3200.0],
+      ['Suporte técnico', 'Serviço', 1, 389.01],
+    ],
+  ),
+  mk(
+    'Pacote empresarial de gestão de projetos - Atlassian Corporate',
+    ['Pesquisa e Desenv.', 'Gestão de Projetos', 'Suprimentos', 'Segurança do Trabalho'],
+    'CE', '03/12/2024', '18/06/2027', 'vigente',
+    [
+      ['Jira Software (assinatura)', 'Anual', 120, 420.0],
+      ['Confluence (assinatura)', 'Anual', 120, 140.0],
+      ['Suporte e onboarding', 'Serviço', 1, 690.12],
+    ],
+  ),
+  mk(
+    'Licença Google Cloud IA - Workspace',
+    ['Pesquisa e Desenv.'],
+    'PR', '03/12/2023', '03/12/2027', 'vigente',
+    [
+      ['Google Workspace Enterprise', 'Mensal', 24, 2800.0],
+      ['Créditos de IA (Vertex AI)', 'Pacote', 12, 1800.0],
+      ['Consultoria de implantação', 'Serviço', 1, 212.34],
+    ],
+  ),
+  mk(
+    'Licença Figma Dev',
+    ['Pesquisa e Desenv.'],
+    'RJ', '01/09/2026', '01/09/2027', 'aguardando',
+    [
+      ['Licença Figma Dev', 'Anual', 40, 305.28],
+      ['Suporte técnico', 'Serviço', 1, 134.47],
+    ],
+  ),
+  mk(
+    'Licença de software - Pacote Office Pro',
+    ['Pesquisa e Desenv.', 'Gestão de projetos', 'Recursos Humanos', 'Suprimentos'],
+    'PA', '12/03/2023', '12/03/2026', 'encerrado',
+    [
+      ['Licença Microsoft 365 Business Basic', 'Anual', 12, 820.0],
+      ['Suporte técnico', 'Serviço', 1, 394.56],
+    ],
+  ),
+  mk(
+    'Licença Figma Dev',
+    ['Pesquisa e Desenv.'],
+    'SC', '20/01/2025', '20/01/2028', 'cancelado',
+    [
+      ['Licença Figma Dev', 'Anual', 140, 305.28],
+      ['Suporte premium', 'Serviço', 1, 471.78],
+    ],
+  ),
 ];
 
 /* Colunas — larguras default do Figma (objeto 296 / setores 304 / UF 60 /
@@ -212,7 +263,31 @@ const compararLinhas = (a: Contrato, b: Contrato, key: SortKey) => {
 /* Página                                                                      */
 /* -------------------------------------------------------------------------- */
 
-export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
+export default function ListaContratos({
+  onAdd,
+  onView,
+  toast,
+}: {
+  onAdd?: () => void;
+  onView?: (c: Contrato) => void;
+  toast?: { id: number; nome: string } | null;
+}) {
+  /* toast de sucesso — entra de cima, fica 3s, sai suave */
+  const [toastNome, setToastNome] = useState<string | null>(null);
+  const [toastSaindo, setToastSaindo] = useState(false);
+  useEffect(() => {
+    if (!toast) return;
+    setToastNome(toast.nome);
+    setToastSaindo(false);
+    const t1 = setTimeout(() => setToastSaindo(true), 3000);
+    const t2 = setTimeout(() => setToastNome(null), 3320);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [toast?.id]);
+  const fecharToast = () => {
+    setToastSaindo(true);
+    setTimeout(() => setToastNome(null), 320);
+  };
+
   /* largura (px) de cada coluna — redimensionável pelo usuário */
   const [widths, setWidths] = useState<number[]>(() => COLUMNS.map((c) => c.width));
   /* índice da coluna sendo arrastada (p/ realce visual) */
@@ -421,7 +496,6 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
               style={{
                 display: 'grid',
                 gridTemplateColumns: gridTemplate,
-                columnGap: 'var(--spacing-16)',
                 alignItems: 'center',
                 background: 'var(--color-bg-card)',
                 padding: '0 var(--spacing-16)',
@@ -430,14 +504,19 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
               {COLUMNS.map((col, i) => {
                 const sortKey = col.key in SORT_TYPE ? (col.key as SortKey) : null;
                 const active = sort && sortKey && sort.key === sortKey;
-                /* Setores e Estado: célula sem padding-esquerdo p/ alinhar o título
-                   ao início das tags (que não têm padding lateral) */
-                const semPadEsq = col.key === 'setores' || col.key === 'estado';
                 return (
                 <div
                   key={col.key}
                   className={`lc-th${resizing === i ? ' lc-th--resizing' : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', padding: '12px 8px 12px', paddingLeft: semPadEsq ? 0 : 'var(--spacing-8)' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--spacing-8)',
+                    padding: '12px 8px 12px',
+                    /* coluna ativamente ordenada — fundo brand-muted preenche a
+                       célula inteira (Figma node 112:1048) */
+                    background: active ? 'var(--color-brand-muted)' : 'transparent',
+                  }}
                 >
                   <div
                     onClick={sortKey ? () => toggleSort(sortKey) : undefined}
@@ -449,23 +528,17 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                       minWidth: 0,
                       cursor: sortKey ? 'pointer' : 'default',
                       userSelect: 'none',
-                      /* realce da coluna ativamente ordenada — margens negativas
-                         compensam o padding p/ não consumir largura (evita corte) */
-                      padding: 'var(--spacing-4) var(--spacing-8)',
-                      margin: '0 -8px',
-                      borderRadius: 'var(--radius-4)',
-                      background: active ? 'var(--color-brand-subtle)' : 'transparent',
                     }}
                   >
-                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: active ? 'var(--color-text-brand)' : 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {col.label}
                     </span>
                     {col.sortable &&
                       (active ? (
                         sort.dir === 'asc' ? (
-                          <ArrowUp size={15} strokeWidth={2} color="var(--color-brand-default)" style={{ flex: 'none' }} />
+                          <ArrowUpNarrowWide size={15} strokeWidth={1.66} color="var(--color-icon-brand)" style={{ flex: 'none' }} />
                         ) : (
-                          <ArrowDown size={15} strokeWidth={2} color="var(--color-brand-default)" style={{ flex: 'none' }} />
+                          <ArrowDownWideNarrow size={15} strokeWidth={1.66} color="var(--color-icon-brand)" style={{ flex: 'none' }} />
                         )
                       ) : (
                         <ArrowUpDown size={15} strokeWidth={1.66} color="var(--color-icon-secondary)" style={{ flex: 'none' }} />
@@ -494,18 +567,22 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
               <div
                 key={i}
                 className="lc-row"
+                onClick={() => onView?.(c)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView?.(c); } }}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridTemplate,
-                  columnGap: 'var(--spacing-16)',
                   alignItems: 'center',
                   minHeight: 80,
                   padding: 'var(--spacing-12) var(--spacing-16)',
                   borderTop: `1px solid ${i === 0 ? 'var(--color-border-default)' : 'var(--color-border-subtle)'}`,
+                  cursor: 'pointer',
                 }}
               >
                 <Cell title clamp>{c.objeto}</Cell>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)', padding: 'var(--spacing-8) 0', minWidth: 0 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)', padding: 'var(--spacing-8)', minWidth: 0 }}>
                   {c.setores.map((s) => (
                     <Tag key={s} tone="brand">{s}</Tag>
                   ))}
@@ -514,7 +591,7 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
                 <Cell tabular>{c.inicio}</Cell>
                 <Cell tabular>{c.fim}</Cell>
                 <Cell tabular>{c.valor}</Cell>
-                <div style={{ padding: 'var(--spacing-8) 0', minWidth: 0 }}>
+                <div style={{ padding: 'var(--spacing-8)', minWidth: 0 }}>
                   <Tag tone={ESTADO_TONE[c.estado]}>{ESTADO_LABEL[c.estado]}</Tag>
                 </div>
               </div>
@@ -554,6 +631,33 @@ export default function ListaContratos({ onAdd }: { onAdd?: () => void }) {
           </div>
         </main>
       </div>
+
+      {/* Toast de sucesso — 12px abaixo da topbar, alinhado ao limite direito */}
+      {toastNome && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`lc-toast${toastSaindo ? ' lc-toast--out' : ''}`}
+        >
+          <span className="lc-toast__accent" />
+          <CheckCircle2 size={20} strokeWidth={2} color="var(--color-success-default)" style={{ flex: 'none', marginTop: 1 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: 'var(--color-text-title)' }}>
+              Contrato adicionado com sucesso
+            </div>
+            <div style={{ fontSize: 14, lineHeight: '20px', color: 'var(--color-success-default)', marginTop: 'var(--spacing-4)' }}>
+              O contrato “{toastNome}” foi adicionado.
+            </div>
+          </div>
+          <button
+            onClick={fecharToast}
+            aria-label="Fechar"
+            style={{ flex: 'none', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--color-text-secondary)', lineHeight: 0 }}
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -584,7 +688,7 @@ function Cell({ children, title = false, tabular = false, clamp = false }: { chi
   );
 }
 
-type TagTone = 'brand' | 'success' | 'warning' | 'error' | 'neutral';
+export type TagTone = 'brand' | 'success' | 'warning' | 'error' | 'neutral';
 
 /* tom → cores (bg / borda / texto), espelhando o componente Tags do Figma */
 const TAG_TONE: Record<TagTone, CSSProperties> = {
@@ -595,7 +699,7 @@ const TAG_TONE: Record<TagTone, CSSProperties> = {
   neutral: { background: 'var(--color-info-subtle)', borderColor: 'var(--color-border-strong)', color: 'var(--color-text-secondary)' },
 };
 
-function Tag({ children, tone }: { children: ReactNode; tone: TagTone }) {
+export function Tag({ children, tone }: { children: ReactNode; tone: TagTone }) {
   return (
     <span
       style={{

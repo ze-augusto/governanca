@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Check, X, AlertTriangle, Plus } from 'lucide-react';
+import { Tag, ESTADO_LABEL, ESTADO_TONE, type Contrato } from './ListaContratos';
 import './AdicionarContrato.css';
 
 /* -------------------------------------------------------------------------- */
@@ -14,9 +15,30 @@ type Item = {
   total: string;
 };
 
-const ORG: Item = { desc: 'Licença Figma Organization', unidade: 'Anual', quant: '3 anos', unit: 'R$ 1.017,59', total: 'R$ 3.052,77' };
-const DEV: Item = { desc: 'Licença Figma Dev', unidade: 'Anual', quant: '3 anos', unit: 'R$ 305,28', total: 'R$ 915,84' };
+const ORG: Item = { desc: 'Licença Figma Organization', unidade: 'Anual', quant: '3', unit: 'R$ 1.017,59', total: 'R$ 3.052,77' };
+const DEV: Item = { desc: 'Licença Figma Dev', unidade: 'Anual', quant: '3', unit: 'R$ 305,28', total: 'R$ 915,84' };
 const ITENS: Item[] = [ORG, ORG, ORG, ORG, DEV, DEV, DEV, DEV, DEV, DEV];
+
+/* Item em branco — base para adicionar uma nova linha */
+const ITEM_VAZIO: Item = { desc: '', unidade: '', quant: '', unit: '', total: '' };
+
+/* Parse de número em formato BR (ex.: "R$ 1.017,59" → 1017.59; "3 anos" → 3).
+   Remove milhar (.), troca vírgula decimal por ponto. */
+function parseBR(str: string): number {
+  const m = str.replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.');
+  const n = parseFloat(m);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/* Formata número como moeda BR (ex.: 3052.77 → "R$ 3.052,77"). */
+function formatBRL(n: number): string {
+  return 'R$ ' + n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* Valor total = quantidade × valor unitário. */
+function calcTotal(quant: string, unit: string): string {
+  return formatBRL(parseBR(quant) * parseBR(unit));
+}
 
 /* Valores extraídos do contrato (estado pós-upload) */
 const CONTRATO = {
@@ -52,6 +74,14 @@ const SETORES_INICIAIS = [
   { nome: 'Segurança do Trabalho', checked: false },
   { nome: 'Engenharia Civil', checked: false },
 ];
+
+/* marca como selecionados os setores que o contrato já beneficia (match
+   tolerante a caixa/espaços, pois os nomes da lista variam) */
+function setoresFrom(nomes: string[]): typeof SETORES_INICIAIS {
+  const norm = (s: string) => s.trim().toLowerCase();
+  const sel = new Set(nomes.map(norm));
+  return SETORES_INICIAIS.map((s) => ({ ...s, checked: sel.has(norm(s.nome)) }));
+}
 
 /* Contratante fictício (órgão público) — base do contrato gerado */
 const CONTRATANTE = {
@@ -142,12 +172,30 @@ const FORM_VAZIO = {
   cpf: '',
 };
 
-export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
-  const [uploaded, setUploaded] = useState(false);
+export default function AdicionarContrato({ onBack, contrato, onSaved }: { onBack?: () => void; contrato?: Contrato; onSaved?: (nome: string) => void }) {
+  /* modo visualizar = abrimos um contrato existente (vindo da lista) */
+  const modoVisualizar = !!contrato;
+  const [uploaded, setUploaded] = useState(modoVisualizar);
+  /* só-leitura por padrão ao visualizar — usuário habilita a edição */
+  const [readOnly, setReadOnly] = useState(modoVisualizar);
   const [loading, setLoading] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const [setores, setSetores] = useState(SETORES_INICIAIS);
-  const [form, setForm] = useState(FORM_VAZIO);
+  const [fileName, setFileName] = useState(contrato ? `${contrato.objeto}.pdf` : '');
+  const [setores, setSetores] = useState(contrato ? setoresFrom(contrato.setores) : SETORES_INICIAIS);
+  const [form, setForm] = useState(
+    contrato
+      ? {
+          objeto: contrato.objeto,
+          uf: contrato.uf,
+          valor: contrato.valor,
+          dataInicio: contrato.inicio,
+          dataFim: contrato.fim,
+          empresa: CONTRATO.empresa,
+          cnpj: CONTRATO.cnpj,
+          representante: CONTRATO.representante,
+          cpf: CONTRATO.cpf,
+        }
+      : FORM_VAZIO,
+  );
   const [paginaAtual, setPaginaAtual] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfScrollRef = useRef<HTMLDivElement>(null);
@@ -192,9 +240,73 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
   const setField = (campo: keyof typeof FORM_VAZIO) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [campo]: e.target.value }));
 
+  /* campos liberados só com upload feito E fora do modo só-leitura */
+  const podeEditar = uploaded && !readOnly;
+  /* visualização pura — exibe os dados sem inputs (Figma 132:7412) */
+  const somenteLeitura = readOnly;
+  /* na visualização, rótulo cola no valor (sem margem de 4px) */
+  const labelStyle = somenteLeitura ? { ...fieldLabel, marginBottom: 0 } : fieldLabel;
+
   const toggle = (i: number) => {
-    if (!uploaded) return;
+    if (!podeEditar) return;
     setSetores((s) => s.map((x, j) => (j === i ? { ...x, checked: !x.checked } : x)));
+  };
+
+  /* salvar habilitado só com edição liberada E ao menos um setor selecionado */
+  const podeSalvar = podeEditar && setores.some((s) => s.checked);
+
+  /* itens contratados — do contrato aberto (visualizar) ou mock padrão (novo) */
+  const [itens, setItens] = useState<Item[]>(contrato?.itens ?? ITENS);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [draft, setDraft] = useState<Item | null>(null);
+  /* linha em edição é nova (recém-adicionada) — cancelar remove a linha */
+  const [adding, setAdding] = useState(false);
+  /* índice pendente de exclusão — abre o modal de confirmação */
+  const [delIdx, setDelIdx] = useState<number | null>(null);
+
+  const confirmDelete = () => {
+    if (delIdx === null) return;
+    setItens((arr) => arr.filter((_, j) => j !== delIdx));
+    setDelIdx(null);
+  };
+
+  const startEdit = (i: number) => {
+    setEditIdx(i);
+    setAdding(false);
+    /* unit editável sem o prefixo "R$" — só o número fica no input */
+    setDraft({ ...itens[i], unit: itens[i].unit.replace(/^R\$\s*/, '') });
+  };
+  /* adiciona uma linha em branco e entra direto no modo de edição */
+  const addItem = () => {
+    setItens((arr) => [...arr, { ...ITEM_VAZIO }]);
+    setEditIdx(itens.length);
+    setDraft({ ...ITEM_VAZIO });
+    setAdding(true);
+  };
+  const cancelEdit = () => {
+    /* item novo cancelado não persiste — remove a linha em branco */
+    if (adding && editIdx !== null) setItens((arr) => arr.filter((_, j) => j !== editIdx));
+    setEditIdx(null);
+    setDraft(null);
+    setAdding(false);
+  };
+  const saveEdit = () => {
+    if (editIdx === null || !draft) return;
+    /* repõe o prefixo "R$" e normaliza o valor unitário */
+    const saved = { ...draft, unit: formatBRL(parseBR(draft.unit)), total: calcTotal(draft.quant, draft.unit) };
+    setItens((arr) => arr.map((it, j) => (j === editIdx ? saved : it)));
+    setEditIdx(null);
+    setDraft(null);
+    setAdding(false);
+  };
+  const setDraftField = (k: keyof Item) => (e: ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    setDraft((d) => (d ? { ...d, [k]: v } : d));
+  };
+  /* quantidade só aceita números — texto quebra os cálculos e a formatação */
+  const setDraftQuant = (e: ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, '');
+    setDraft((d) => (d ? { ...d, quant: v } : d));
   };
 
   return (
@@ -279,41 +391,37 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               Lista de contratos
             </button>
             <span style={{ color: 'var(--color-border-default)' }}>/</span>
-            <span style={{ color: 'var(--color-text-title)', fontWeight: 600 }}>Adicionar contrato</span>
+            <span style={{ color: 'var(--color-text-title)', fontWeight: 600 }}>
+              {modoVisualizar ? 'Visualizar contrato' : 'Adicionar contrato'}
+            </span>
           </nav>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)' }}>
-            <button
-              onClick={onBack}
-              style={{
-                height: 36,
-                padding: '0 var(--spacing-16)',
-                borderRadius: 'var(--radius-8)',
-                border: '1px solid var(--color-border-default)',
-                background: 'var(--color-bg-card)',
-                color: 'var(--color-text-body)',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              disabled={!uploaded}
-              style={{
-                height: 36,
-                padding: '0 var(--spacing-16)',
-                borderRadius: 'var(--radius-8)',
-                border: `1px solid ${uploaded ? 'var(--color-brand-default)' : 'var(--cinza-400)'}`,
-                background: uploaded ? 'var(--color-brand-default)' : 'var(--cinza-400)',
-                color: uploaded ? 'var(--color-text-inverse)' : 'var(--cinza-700)',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: uploaded ? 'pointer' : 'not-allowed',
-              }}
-            >
-              Salvar contrato
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-16)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)' }}>
+              {modoVisualizar && readOnly ? (
+                <>
+                  <button onClick={onBack} className="ac-btn ac-btn--secondary">Voltar</button>
+                  <button onClick={() => setReadOnly(false)} className="ac-btn ac-btn--primary">
+                    Editar contrato
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={modoVisualizar ? () => setReadOnly(true) : onBack}
+                    className="ac-btn ac-btn--secondary"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    disabled={!podeSalvar}
+                    onClick={modoVisualizar ? () => setReadOnly(true) : () => onSaved?.(form.objeto)}
+                    className={`ac-btn ${podeSalvar ? 'ac-btn--primary' : 'ac-btn--disabled'}`}
+                  >
+                    {modoVisualizar ? 'Salvar alterações' : 'Salvar contrato'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -359,7 +467,7 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                 onScroll={onScrollPdf}
                 style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 'var(--spacing-16)', background: 'var(--cinza-300)' }}
               >
-                <VisualizadorContrato />
+                <VisualizadorContrato dados={form} itens={itens} />
               </div>
             ) : loading ? (
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 'var(--spacing-16)', background: 'var(--cinza-300)' }}>
@@ -438,6 +546,8 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                 height: 48,
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 'var(--spacing-12)',
                 padding: '0 var(--spacing-16)',
                 borderBottom: '1px solid var(--cinza-200)',
               }}
@@ -445,6 +555,10 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: '24px', color: 'var(--color-text-title)' }}>
                 Dados do contrato
               </h1>
+              {/* Estado do contrato — tag do design system, no cabeçalho do painel */}
+              {modoVisualizar && contrato && (
+                <Tag tone={ESTADO_TONE[contrato.estado]}>{ESTADO_LABEL[contrato.estado]}</Tag>
+              )}
             </div>
 
             {/* Corpo — scroll próprio. Carregando: skeleton */}
@@ -457,25 +571,25 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
               <div>
                 <div style={sectionTitle}>Dados gerais</div>
                 <div style={{ marginBottom: 'var(--spacing-16)' }}>
-                  <label style={fieldLabel}>Objeto do contrato</label>
-                  <Field disabled={!uploaded} value={form.objeto} onChange={setField('objeto')} placeholder={PLACEHOLDERS.objeto} />
+                  <label style={labelStyle}>Objeto do contrato</label>
+                  <Field plain={somenteLeitura} disabled={!podeEditar} value={form.objeto} onChange={setField('objeto')} placeholder={PLACEHOLDERS.objeto} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 'var(--spacing-16)' }}>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>UF contratante</label>
-                    <Field disabled={!uploaded} value={form.uf} onChange={setField('uf')} placeholder={PLACEHOLDERS.uf} />
+                    <label style={labelStyle}>UF contratante</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.uf} onChange={setField('uf')} placeholder={PLACEHOLDERS.uf} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>Valor do contrato</label>
-                    <Field disabled={!uploaded} value={form.valor} onChange={setField('valor')} placeholder={PLACEHOLDERS.valor} />
+                    <label style={labelStyle}>Valor do contrato</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.valor} onChange={setField('valor')} placeholder={PLACEHOLDERS.valor} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>Data de início do contrato</label>
-                    <Field disabled={!uploaded} value={form.dataInicio} onChange={setField('dataInicio')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
+                    <label style={labelStyle}>Data de início do contrato</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.dataInicio} onChange={setField('dataInicio')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>Data de fim de contrato</label>
-                    <Field disabled={!uploaded} value={form.dataFim} onChange={setField('dataFim')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
+                    <label style={labelStyle}>Data de fim de contrato</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.dataFim} onChange={setField('dataFim')} placeholder={PLACEHOLDERS.data} icon={<CalendarIcon />} />
                   </div>
                 </div>
               </div>
@@ -485,22 +599,95 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                 <div style={sectionTitle}>Dados do contratado</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 'var(--spacing-16)' }}>
                   <div style={{ gridColumn: 'span 3', minWidth: 0 }}>
-                    <label style={fieldLabel}>Nome da empresa contratada</label>
-                    <Field disabled={!uploaded} value={form.empresa} onChange={setField('empresa')} placeholder={PLACEHOLDERS.empresa} />
+                    <label style={labelStyle}>Nome da empresa contratada</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.empresa} onChange={setField('empresa')} placeholder={PLACEHOLDERS.empresa} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>CNPJ</label>
-                    <Field disabled={!uploaded} value={form.cnpj} onChange={setField('cnpj')} placeholder={PLACEHOLDERS.cnpj} />
+                    <label style={labelStyle}>CNPJ</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.cnpj} onChange={setField('cnpj')} placeholder={PLACEHOLDERS.cnpj} />
                   </div>
                   <div style={{ gridColumn: 'span 3', minWidth: 0 }}>
-                    <label style={fieldLabel}>Representante da empresa contratada</label>
-                    <Field disabled={!uploaded} value={form.representante} onChange={setField('representante')} placeholder={PLACEHOLDERS.representante} />
+                    <label style={labelStyle}>Representante da empresa contratada</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.representante} onChange={setField('representante')} placeholder={PLACEHOLDERS.representante} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={fieldLabel}>CPF</label>
-                    <Field disabled={!uploaded} value={form.cpf} onChange={setField('cpf')} placeholder={PLACEHOLDERS.cpf} />
+                    <label style={labelStyle}>CPF</label>
+                    <Field plain={somenteLeitura} disabled={!podeEditar} value={form.cpf} onChange={setField('cpf')} placeholder={PLACEHOLDERS.cpf} />
                   </div>
                 </div>
+              </div>
+
+              {/* Setor(es) beneficiado(s) — antes da lista de itens */}
+              <div style={sectionDivider}>
+                <div style={{ ...sectionTitle, marginBottom: 'var(--spacing-4)' }}>Setor(es) beneficiado(s)</div>
+                <p style={{ margin: '0 0 var(--spacing-12)', fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
+                  Informe os setores da empresa que serão atendidos por este contrato
+                </p>
+
+                {somenteLeitura ? (
+                  /* Visualização — setores como tags do design system (Figma 132:7665) */
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-8)' }}>
+                    {setores.some((s) => s.checked) ? (
+                      setores.filter((s) => s.checked).map((s) => (
+                        <Tag key={s.nome} tone="brand">{s.nome}</Tag>
+                      ))
+                    ) : (
+                      <span style={{ fontSize: 14, lineHeight: '20px', color: 'var(--color-text-secondary)' }}>—</span>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
+                    {setores.map((setor, i) => (
+                      <button
+                        key={setor.nome}
+                        onClick={() => toggle(i)}
+                        disabled={!podeEditar}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--spacing-8)',
+                          textAlign: 'left',
+                          height: 44,
+                          padding: '0 var(--spacing-16)',
+                          borderRadius: 'var(--radius-8)',
+                          border: `1px solid ${!uploaded ? 'var(--cinza-300)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
+                          background: !uploaded
+                            ? 'var(--cinza-200)'
+                            : setor.checked
+                              ? 'var(--color-brand-muted)'
+                              : 'var(--color-bg-card)',
+                          cursor: podeEditar ? 'pointer' : 'default',
+                          fontSize: 14,
+                          color: uploaded ? 'var(--color-text-body)' : 'var(--color-text-disabled)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: uploaded ? 20 : 18,
+                            height: uploaded ? 20 : 18,
+                            flex: 'none',
+                            borderRadius: uploaded ? 'var(--radius-4)' : 'var(--radius-2)',
+                            border: `${uploaded ? '1.5px' : '1px'} solid ${!uploaded ? 'var(--color-icon-disabled)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
+                            background: !uploaded ? 'transparent' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-bg-card)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--color-text-inverse)',
+                          }}
+                        >
+                          {setor.checked && (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                          )}
+                        </span>
+                        <span style={{ color: setor.checked ? 'var(--color-text-brand)' : undefined }}>
+                          {setor.nome}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Itens contratados — Figma: card com borda completa, linhas com border-top */}
@@ -530,7 +717,9 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                     <div />
                   </div>
                   {uploaded ? (
-                    ITENS.map((item, i) => (
+                    itens.map((item, i) => {
+                      const editing = editIdx === i;
+                      return (
                       <div
                         key={i}
                         style={{
@@ -545,95 +734,94 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
                           lineHeight: '20px',
                         }}
                       >
-                        <div style={{ color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.desc}</div>
-                        <div style={{ color: 'var(--color-text-secondary)' }}>{item.unidade}</div>
-                        <div style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{item.quant}</div>
-                        <div style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{item.unit}</div>
-                        <div style={{ color: 'var(--color-text-body)', fontVariantNumeric: 'tabular-nums' }}>{item.total}</div>
-                        <div style={{ display: 'flex', gap: 'var(--spacing-8)', justifyContent: 'flex-end' }}>
-                          <button className="icon-btn" aria-label="Editar item">
-                            <Pencil size={15} strokeWidth={1.66} />
-                          </button>
-                          <button className="icon-btn icon-btn--danger" aria-label="Excluir item">
-                            <Trash2 size={15} strokeWidth={1.66} />
-                          </button>
-                        </div>
+                        {editing && draft ? (
+                          <>
+                            <Field disabled={false} value={draft.desc} onChange={setDraftField('desc')} placeholder="Descrição" />
+                            <Field disabled={false} value={draft.unidade} onChange={setDraftField('unidade')} placeholder="Unidade" />
+                            <Field disabled={false} value={draft.quant} onChange={setDraftQuant} placeholder="Quant." />
+                            <Field
+                              disabled={false}
+                              value={draft.unit}
+                              onChange={setDraftField('unit')}
+                              placeholder="0,00"
+                              icon={<span style={{ flex: 'none', fontSize: 14, color: 'var(--color-text-secondary)' }}>R$</span>}
+                            />
+                            {/* total é calculado (quant × unit) — campo só-leitura */}
+                            <Field disabled value={calcTotal(draft.quant, draft.unit)} onChange={() => {}} placeholder="Valor total" />
+                            <div style={{ display: 'flex', gap: 'var(--spacing-8)', justifyContent: 'flex-end' }}>
+                              <button className="icon-btn" aria-label="Cancelar edição" onClick={cancelEdit}>
+                                <X size={15} strokeWidth={1.66} />
+                              </button>
+                              <button className="icon-btn icon-btn--primary" aria-label="Salvar item" onClick={saveEdit}>
+                                <Check size={15} strokeWidth={1.66} />
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ color: 'var(--color-text-title)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.desc}</div>
+                            <div style={{ color: 'var(--color-text-secondary)' }}>{item.unidade}</div>
+                            <div style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{item.quant}</div>
+                            <div style={{ color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{item.unit}</div>
+                            <div style={{ color: 'var(--color-text-body)', fontVariantNumeric: 'tabular-nums' }}>{item.total}</div>
+                            <div style={{ display: 'flex', gap: 'var(--spacing-8)', justifyContent: 'flex-end' }}>
+                              {podeEditar && (
+                                <>
+                                  <button className="icon-btn" aria-label="Editar item" onClick={() => startEdit(i)} disabled={editIdx !== null}>
+                                    <Pencil size={15} strokeWidth={1.66} />
+                                  </button>
+                                  <button className="icon-btn icon-btn--danger" aria-label="Excluir item" disabled={editIdx !== null} onClick={() => setDelIdx(i)}>
+                                    <Trash2 size={15} strokeWidth={1.66} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div style={{ padding: '36px var(--spacing-16)', textAlign: 'center', fontSize: 14, color: 'var(--color-text-secondary)', borderTop: '1px solid var(--color-border-default)' }}>
                       Adicione um contrato para visualizar seus itens
                     </div>
                   )}
-                  {/* Rodapé — border-top default, texto 12/600 #212121 (Cinza P do Figma) */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 40, padding: '0 var(--spacing-16)', borderTop: '1px solid var(--color-border-default)' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: '#212121' }}>
-                      Total de itens: {uploaded ? '10' : '-'}
-                    </span>
-                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: '#212121', fontVariantNumeric: 'tabular-nums' }}>
-                      Valor total dos itens: {uploaded ? 'R$ 17.706,12' : 'R$ 0,00'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Setores beneficiados */}
-              <div style={sectionDivider}>
-                <div style={{ ...sectionTitle, marginBottom: 'var(--spacing-4)' }}>Setor(es) beneficiado(s)</div>
-                <p style={{ margin: '0 0 var(--spacing-12)', fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
-                  Informe os setores da empresa que serão atendidos por este contrato
-                </p>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
-                  {setores.map((setor, i) => (
+                  {/* Adicionar item — só no modo de edição; entra direto na nova linha */}
+                  {podeEditar && (
                     <button
-                      key={setor.nome}
-                      onClick={() => toggle(i)}
-                      disabled={!uploaded}
+                      type="button"
+                      onClick={addItem}
+                      disabled={editIdx !== null}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: 'var(--spacing-8)',
-                        textAlign: 'left',
-                        height: 44,
+                        width: '100%',
+                        minHeight: 44,
                         padding: '0 var(--spacing-16)',
-                        borderRadius: 'var(--radius-8)',
-                        border: `1px solid ${!uploaded ? 'var(--cinza-300)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
-                        background: !uploaded
-                          ? 'var(--cinza-200)'
-                          : setor.checked
-                            ? 'var(--color-brand-muted)'
-                            : 'var(--color-bg-card)',
-                        cursor: uploaded ? 'pointer' : 'not-allowed',
+                        border: 'none',
+                        borderTop: '1px solid var(--color-border-default)',
+                        background: 'transparent',
+                        color: editIdx !== null ? 'var(--color-text-disabled)' : 'var(--color-text-brand)',
                         fontSize: 14,
-                        color: uploaded ? 'var(--color-text-body)' : 'var(--color-text-disabled)',
+                        fontWeight: 600,
+                        cursor: editIdx !== null ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      <span
-                        style={{
-                          width: uploaded ? 20 : 18,
-                          height: uploaded ? 20 : 18,
-                          flex: 'none',
-                          borderRadius: uploaded ? 'var(--radius-4)' : 'var(--radius-2)',
-                          border: `${uploaded ? '1.5px' : '1px'} solid ${!uploaded ? 'var(--color-icon-disabled)' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-border-default)'}`,
-                          background: !uploaded ? 'transparent' : setor.checked ? 'var(--color-brand-default)' : 'var(--color-bg-card)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'var(--color-text-inverse)',
-                        }}
-                      >
-                        {setor.checked && (
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        )}
-                      </span>
-                      <span style={{ color: setor.checked ? 'var(--color-text-brand)' : undefined }}>
-                        {setor.nome}
-                      </span>
+                      <Plus size={16} strokeWidth={1.66} />
+                      Adicionar item
                     </button>
-                  ))}
+                  )}
+                  {/* Rodapé — border-top default, texto 12/600 #212121 (Cinza P do Figma) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 40, padding: '0 var(--spacing-16)', borderTop: '1px solid var(--color-border-default)' }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: '#212121' }}>
+                      Total de itens: {uploaded ? itens.length : '-'}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px', color: '#212121', fontVariantNumeric: 'tabular-nums' }}>
+                      Valor total dos itens: {uploaded ? formatBRL(itens.reduce((s, it) => s + parseBR(it.total), 0)) : 'R$ 0,00'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -642,6 +830,14 @@ export default function AdicionarContrato({ onBack }: { onBack?: () => void }) {
           </section>
         </main>
       </div>
+
+      {delIdx !== null && (
+        <ConfirmModal
+          item={itens[delIdx]}
+          onCancel={() => setDelIdx(null)}
+          onConfirm={confirmDelete}
+        />
+      )}
     </div>
   );
 }
@@ -680,9 +876,10 @@ function Folha({ numero, children }: { numero: number; children: ReactNode }) {
   );
 }
 
-/* Documento completo — 11 páginas, geradas a partir dos dados do contrato */
-function VisualizadorContrato() {
-  const C = CONTRATO;
+/* Documento completo — 11 páginas, geradas a partir dos dados do contrato.
+   Recebe os valores do formulário e os itens — o PDF reflete o que está na tela. */
+function VisualizadorContrato({ dados, itens }: { dados: typeof FORM_VAZIO; itens: Item[] }) {
+  const C = dados;
   return (
     <>
       {/* 1 — Rosto e preâmbulo */}
@@ -798,7 +995,7 @@ function VisualizadorContrato() {
             </tr>
           </thead>
           <tbody>
-            {ITENS.map((it, i) => (
+            {itens.map((it, i) => (
               <tr key={i}>
                 <td style={{ border: '1px solid #c7ccd4', padding: '5px 7px' }}>{i + 1}</td>
                 <td style={{ border: '1px solid #c7ccd4', padding: '5px 7px' }}>{it.desc}</td>
@@ -810,7 +1007,9 @@ function VisualizadorContrato() {
             ))}
           </tbody>
         </table>
-        <p style={{ textAlign: 'right', fontWeight: 700 }}>Valor total dos itens: {C.valor}</p>
+        <p style={{ textAlign: 'right', fontWeight: 700 }}>
+          Valor total dos itens: {formatBRL(itens.reduce((s, it) => s + parseBR(it.total), 0))}
+        </p>
       </Folha>
 
       {/* 7 — Obrigações da contratada */}
@@ -938,6 +1137,22 @@ function FormSkeleton() {
         </div>
       </div>
 
+      {/* Setor(es) beneficiado(s) — antes da lista de itens */}
+      <div style={sectionDivider}>
+        <div style={{ ...sectionTitle, marginBottom: 'var(--spacing-4)' }}>Setor(es) beneficiado(s)</div>
+        <p style={{ margin: '0 0 var(--spacing-12)', fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
+          Informe os setores da empresa que serão atendidos por este contrato
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', height: 44 }}>
+              <Bar w={18} h={18} />
+              <Bar w={`${50 + ((i * 17) % 40)}%`} />
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Itens contratados */}
       <div style={sectionDivider}>
         <div style={sectionTitle}>Itens contratados</div>
@@ -972,40 +1187,43 @@ function FormSkeleton() {
           </div>
         </div>
       </div>
-
-      {/* Setor(es) beneficiado(s) */}
-      <div style={sectionDivider}>
-        <div style={{ ...sectionTitle, marginBottom: 'var(--spacing-4)' }}>Setor(es) beneficiado(s)</div>
-        <p style={{ margin: '0 0 var(--spacing-12)', fontSize: 12, lineHeight: '16px', color: 'var(--color-text-secondary)' }}>
-          Informe os setores da empresa que serão atendidos por este contrato
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--spacing-16)' }}>
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-8)', height: 44 }}>
-              <Bar w={18} h={18} />
-              <Bar w={`${50 + ((i * 17) % 40)}%`} />
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
 
-/* Campo editável — desabilitado antes do upload, liberado depois */
+/* Campo editável — desabilitado antes do upload, liberado depois.
+   plain = visualização pura: exibe o valor como texto, sem caixa/borda. */
 function Field({
   disabled,
+  plain,
   value,
   onChange,
   placeholder,
   icon,
 }: {
   disabled: boolean;
+  plain?: boolean;
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
   icon?: ReactNode;
 }) {
+  if (plain) {
+    return (
+      <div
+        style={{
+          minWidth: 0,
+          padding: 'var(--spacing-8) 0',
+          fontSize: 14,
+          lineHeight: '20px',
+          color: 'var(--color-text-body)',
+          wordBreak: 'break-word',
+        }}
+      >
+        {value || '—'}
+      </div>
+    );
+  }
   return (
     <div
       style={{
@@ -1026,6 +1244,100 @@ function Field({
         onChange={onChange}
         placeholder={placeholder}
       />
+    </div>
+  );
+}
+
+/* Modal de confirmação de exclusão — segue o design system (overlay, card
+   radius-12, ícone de erro, ações cancelar/excluir) */
+function ConfirmModal({ item, onCancel, onConfirm }: { item: Item; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      onClick={onCancel}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--spacing-24)',
+        background: 'rgba(0, 0, 0, 0.4)',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 'min(440px, 100%)',
+          background: 'var(--color-bg-card)',
+          borderRadius: 'var(--radius-12)',
+          padding: 'var(--spacing-24)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.16)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--spacing-16)' }}>
+          <div
+            style={{
+              flex: 'none',
+              width: 40,
+              height: 40,
+              borderRadius: 'var(--radius-full)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'var(--color-error-subtle)',
+              color: 'var(--color-icon-error)',
+            }}
+          >
+            <AlertTriangle size={20} strokeWidth={2} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h2 id="confirm-title" style={{ margin: 0, fontSize: 16, fontWeight: 600, lineHeight: '24px', color: 'var(--color-text-title)' }}>
+              Excluir item contratado
+            </h2>
+            <p style={{ margin: 'var(--spacing-4) 0 0', fontSize: 14, lineHeight: '20px', color: 'var(--color-text-secondary)' }}>
+              Tem certeza que deseja excluir <strong style={{ color: 'var(--color-text-body)' }}>{item.desc}</strong>? Esta ação não pode ser desfeita.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-8)', marginTop: 'var(--spacing-24)' }}>
+          <button
+            onClick={onCancel}
+            style={{
+              height: 36,
+              padding: '0 var(--spacing-16)',
+              borderRadius: 'var(--radius-8)',
+              border: '1px solid var(--color-border-default)',
+              background: 'var(--color-bg-card)',
+              color: 'var(--color-text-body)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              height: 36,
+              padding: '0 var(--spacing-16)',
+              borderRadius: 'var(--radius-8)',
+              border: '1px solid var(--color-error-default)',
+              background: 'var(--color-error-default)',
+              color: 'var(--color-text-inverse)',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Excluir
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
